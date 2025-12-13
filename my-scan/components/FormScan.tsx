@@ -88,12 +88,8 @@ export default function FormScan({ buildMode }: Props) {
       )}
 
       <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-60"
-        >
-          {loading ? "Starting..." : "Start Scan"}
+        <button className="inline-flex items-center gap-2 bg-accent bg-slate-700 text-white px-4 py-2 rounded-md shadow hover:brightness-95 disabled:opacity-60">
+          Start Scan  
         </button>
       </div>
     </form>
