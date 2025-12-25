@@ -1,0 +1,197 @@
+stages:
+  - setup
+  - security_audit
+  - build_artifact
+  - container_scan
+  - release
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "api"
+    - if: $CI_PIPELINE_SOURCE == "pipeline"
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+variables:
+  GITLEAKS_VERSION: "v8.18.4"
+  SEMGREP_VERSION: "latest"
+  TRIVY_VERSION: "0.53.0"
+  KANIKO_VERSION: "v1.23.1-debug"
+  CRANE_VERSION: "debug"
+  
+  # --- Dynamic Variables ---
+  # PROJECT_NAME และ USER_TAG จะถูกส่งมาจาก API
+  # ถ้าไม่ได้ส่งมา จะใช้ค่า default เพื่อกัน Error
+  PROJECT_NAME: "${PROJECT_NAME:-scanned-project}"
+  USER_TAG: "${USER_TAG:-latest}"
+  
+  # สร้างชื่อ Image เต็มๆ จาก Project Name
+  IMAGE_NAME: index.docker.io/$DOCKER_USER/$PROJECT_NAME
+  
+  # ใช้ SHA สำหรับการ Build ชั่วคราว (Internal Use)
+  TEMP_IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+  
+  TRIVY_CACHE_DIR: ".trivycache/"
+  TRIVY_NO_PROGRESS: "true"
+
+# --- Template: Script for Cloning Code ---
+.clone_logic: &clone_and_fix
+  - echo "Initializing Git logic..."
+  - if [ -z "$USER_REPO_URL" ]; then echo "USER_REPO_URL is missing"; exit 1; fi
+  - if ! command -v git &> /dev/null; then apk add --no-cache git; fi
+  - git clone "$USER_REPO_URL" project_temp
+  - rm -rf .git
+  - mv project_temp/.git .
+  - cp -a project_temp/. . 
+  - rm -rf project_temp
+  - echo "Code cloned successfully."
+
+# 1. Fetch Source
+fetch_source_minified:
+  stage: setup
+  image: 
+    name: alpine/git:2.45.2
+    entrypoint: [""]
+  retry: 2
+  script:
+    - *clone_and_fix
+    - echo "Removing .git history to save artifact size..."
+    - rm -rf .git
+  artifacts:
+    paths: ["."]
+    expire_in: 1 hour
+
+# 2. Gitleaks
+gitleaks_scan:
+  stage: security_audit
+  image: 
+    name: zricethezav/gitleaks:$GITLEAKS_VERSION
+    entrypoint: [""]
+  retry: 2
+  script:
+    - *clone_and_fix
+    - echo "Scanning for secrets..."
+    - gitleaks detect --source . -v --report-path gitleaks-report.json --exit-code 0
+  allow_failure: true
+  artifacts:
+    paths: [gitleaks-report.json]
+    when: always
+
+# 3. Semgrep
+semgrep_scan:
+  stage: security_audit
+  image: 
+    name: returntocorp/semgrep:$SEMGREP_VERSION
+    entrypoint: [""]
+  retry: 2
+  script:
+    - *clone_and_fix
+    - echo "Scanning code vulnerabilities..."
+    - semgrep scan --config=p/ci --json --output=semgrep-report.json --metrics=off --verbose .
+  allow_failure: true
+  artifacts:
+    paths: [semgrep-report.json]
+    when: always
+
+# 4. Build & Push (Push SHA Tag ขึ้นไปก่อน)
+build_and_push:
+  stage: build_artifact
+  image:
+    name: gcr.io/kaniko-project/executor:$KANIKO_VERSION
+    entrypoint: [""]
+  retry: 2
+  dependencies: [fetch_source_minified]
+  script:
+    - echo "Building and Pushing Docker image..."
+    
+    - |
+      if [ -z "$DOCKER_USER" ] || [ -z "$DOCKER_PASSWORD" ]; then
+        echo "Error: DOCKER_USER or DOCKER_PASSWORD is not set."
+        exit 1
+      fi
+
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"auth\":\"$(printf "%s:%s" "${DOCKER_USER}" "${DOCKER_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    
+    - echo "FROM alpine:latest" > Dockerfile
+    - echo "WORKDIR /app" >> Dockerfile
+    - echo "COPY . ." >> Dockerfile
+    
+    # Push ไปที่ $IMAGE_NAME:$TEMP_IMAGE_TAG (SHA)
+    - /kaniko/executor --context "." --dockerfile "Dockerfile" --destination $IMAGE_NAME:$TEMP_IMAGE_TAG
+
+# 5. Trivy
+trivy_scan:
+  stage: container_scan
+  image: 
+    name: aquasec/trivy:$TRIVY_VERSION
+    entrypoint: [""]
+  variables:
+    TRIVY_USERNAME: "$DOCKER_USER"
+    TRIVY_PASSWORD: "$DOCKER_PASSWORD"
+    TRIVY_CACHE_DIR: ".trivycache/"
+  cache:
+    key: trivy-db-cache-protected
+    paths:
+      - .trivycache/
+    policy: pull-push
+  retry: 2
+  script:
+    - echo "Preparing Container Scan..."
+    - if ! command -v wget &> /dev/null; then apk add --no-cache wget; fi
+    - wget https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl -O html.tpl
+    
+    - echo "Scanning Remote Image ($IMAGE_NAME:$TEMP_IMAGE_TAG)..."
+    - trivy image --format template --template "@html.tpl" -o trivy-report.html --scanners vuln $IMAGE_NAME:$TEMP_IMAGE_TAG
+    - trivy image --format json -o trivy-report.json --scanners vuln $IMAGE_NAME:$TEMP_IMAGE_TAG
+  allow_failure: true
+  artifacts:
+    paths: [trivy-report.json, trivy-report.html]
+    when: always
+
+# 6. Release (Logic เปลี่ยน Tag อยู่ที่นี่)
+push_to_hub:
+  stage: release
+  image:
+    name: gcr.io/go-containerregistry/crane:$CRANE_VERSION
+    entrypoint: [""]
+  retry: 2
+  # ต้องรับ Artifacts จาก trivy_scan เพื่อเอาไฟล์ json มาตรวจ
+  dependencies: [trivy_scan]
+  script:
+    - echo "Promoting image..."
+    - if [ -z "$DOCKER_USER" ]; then echo "No Docker Creds, Skipping."; exit 0; fi
+    
+    # ลง jq เพื่อใช้อ่านไฟล์ JSON
+    - if ! command -v jq &> /dev/null; then apk add --no-cache jq; fi
+
+    # 1. ตรวจสอบ Critical Vulnerabilities
+    - echo "Checking vulnerability report..."
+    - |
+      CRITICAL_COUNT=0
+      if [ -f "trivy-report.json" ]; then
+        # นับจำนวนช่องโหว่ระดับ CRITICAL
+        CRITICAL_COUNT=$(jq '[ .Results[]? | .Vulnerabilities[]? | select(.Severity == "CRITICAL") ] | length' trivy-report.json)
+      fi
+      
+      if [ -z "$CRITICAL_COUNT" ]; then CRITICAL_COUNT=0; fi
+      echo "Found $CRITICAL_COUNT critical vulnerabilities."
+
+    # 2. กำหนดชื่อ Tag ปลายทาง (Target Tag)
+    - TARGET_TAG="$USER_TAG"
+    
+    # 3. ถ้ามี Critical -> บังคับเติม -warning
+    - |
+      if [ "$CRITICAL_COUNT" -gt 0 ]; then
+        echo "⚠️ CRITICAL ISSUES FOUND! Appending '-warning' to tag."
+        TARGET_TAG="${USER_TAG}-warning"
+      else
+        echo " No critical issues. Using requested tag."
+      fi
+
+    - echo "Final Image: $IMAGE_NAME:$TARGET_TAG"
+
+    # 4. Login & Copy (Promote from SHA -> User Tag)
+    - crane auth login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD" index.docker.io
+    - crane cp "$IMAGE_NAME:$TEMP_IMAGE_TAG" "$IMAGE_NAME:$TARGET_TAG"
+    
+  when: manual

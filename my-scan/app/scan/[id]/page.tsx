@@ -1,14 +1,16 @@
 // /app/scan/[id]/page.tsx  (server component - unwrap params)
 import PipelineView from "@/components/PipelineView";
-import ConfirmBuildButton from "@/components/ConfirmBuildButton";
+import ConfirmBuildButton from "@/components/ReleaseButton";
 
-type Props = { params: { id: string } };
+type Props = { 
+  params: Promise<{ id: string }> 
+};
 
 // export async so we can await params (unwrap promise)
-export default async function ScanPage({ params }: Props) {
+export default async function ScanPage(props: Props) {
   // params might be a Promise in some Next.js server environments
-  const resolved = await params;
-  const id = resolved?.id;
+  const params = await props.params;
+  const id = params.id;
 
   if (!id) return <div>Missing id</div>;
 
