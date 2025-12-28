@@ -24,7 +24,9 @@ export async function POST(req: Request) {
         repoUrl, 
         dockerUser, dockerToken,            
         dockerUsername, dockerAccessToken,  
-        projectName, imageTag               
+        projectName, imageTag,
+        // --- รับค่า Git Credential (Optional) ---
+        gitUser, gitToken 
     } = body;
 
     const finalUser = dockerUser || dockerUsername;
@@ -34,8 +36,8 @@ export async function POST(req: Request) {
 
     console.log("DEBUG RECEIVE:", { 
         repoUrl, 
-        hasUser: !!finalUser, 
-        hasToken: !!finalToken
+        hasDockerUser: !!finalUser, 
+        hasGitUser: !!gitUser // Log ดูว่าส่ง Git User มาไหม
     });
 
     if (!repoUrl) throw new Error("Missing repoUrl");
@@ -69,7 +71,6 @@ export async function POST(req: Request) {
     const projectId = createRes.data.id;
     console.log(`Project Created ID: ${projectId}`);
     
-    // รอให้ GitLab สร้าง Git Repository เสร็จสมบูรณ์
     await delay(2000);
 
     // 5. Detect Branch
@@ -77,12 +78,9 @@ export async function POST(req: Request) {
         headers: { 'PRIVATE-TOKEN': token },
         httpsAgent: agent
     });
-    // ถ้า default_branch ยังไม่มา ให้ fallback เป็น main
     const targetBranch = projectInfo.data.default_branch || 'main';
-    console.log(`Target Branch detected: ${targetBranch}`);
 
     // 6. Push CI File
-    // *** สำคัญ: เพิ่ม [skip ci] เพื่อไม่ให้ Pipeline รันเองอัตโนมัติ (เพราะมันจะ Fail เนื่องจากไม่มี Variable) ***
     console.log("Pushing clean .gitlab-ci.yml...");
     await axios.post(`${baseUrl}/api/v4/projects/${projectId}/repository/files/.gitlab-ci.yml`, {
         branch: targetBranch,
@@ -94,7 +92,6 @@ export async function POST(req: Request) {
     });
     console.log("CI File Pushed! (Waiting for sync...)");
     
-    // รอให้ File Indexing ทำงานสักครู่
     await delay(1500);
 
     // 7. Prepare Variables
@@ -107,10 +104,20 @@ export async function POST(req: Request) {
         { key: 'USER_TAG', value: finalUserTag }
     ];
 
+    // --- Inject Docker Creds (ถ้ามี) ---
     if (finalUser && finalToken) {
         pipelineVariables.push(
             { key: 'DOCKER_USER', value: finalUser.trim() },
             { key: 'DOCKER_PASSWORD', value: finalToken.trim() }
+        );
+    }
+
+    // --- Inject Git Creds (เฉพาะ Private Repo) ---
+    if (gitUser && gitToken) {
+        console.log("Injecting Git Credentials for Private Repo...");
+        pipelineVariables.push(
+            { key: 'GIT_USERNAME', value: gitUser.trim() },
+            { key: 'GIT_TOKEN', value: gitToken.trim() }
         );
     }
 
@@ -132,13 +139,11 @@ export async function POST(req: Request) {
     });
 
   } catch (err: any) {
-    // --- ปรับปรุงการแสดงผล Error ให้เห็นไส้ใน ---
     console.error("❌ API ERROR OCCURRED");
     let errorDetail = err.message;
 
     if (axios.isAxiosError(err) && err.response) {
         console.error("GitLab Response Status:", err.response.status);
-        console.error("GitLab Response Data:", JSON.stringify(err.response.data, null, 2)); // ดูตรงนี้ใน Terminal
         errorDetail = JSON.stringify(err.response.data);
     } else {
         console.error(err);

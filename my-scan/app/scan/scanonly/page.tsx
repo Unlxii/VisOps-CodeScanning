@@ -1,5 +1,5 @@
 // /app/scan/scanonly/page.tsx
-import FormScan from "@/components/FormScan";
+import FormScan from "@/components/ScanForm";
 
 export default function ScanOnlyPage() {
   return (

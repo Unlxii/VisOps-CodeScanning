@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// เก็บ Template Dockerfile (Admin แก้ได้)
+model DockerTemplate {
+  id        String   @id @default(uuid())
+  stack     String   @unique // node, python, java
+  content   String   // เนื้อหา Dockerfile
+  updatedAt DateTime @updatedAt
+}
+
+// เก็บประวัติการสแกน (User Scan History)
+model ScanHistory {
+  id          String   @id @default(uuid())
+  
+  // ข้อมูล Project & User
+  userName    String   // ใครเป็นคนสั่งสแกน
+  repoUrl     String
+  projectName String
+  
+  // ข้อมูล Image
+  imageTag    String
+  
+  // สถานะและผลลัพธ์
+  status      String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  scanId      String   // GitLab Project ID
+  pipelineId  String?  
+  vulnCritical Int     @default(0)
+  details      Json?   // เก็บ Error log หรือข้อมูลเพิ่มเติม
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
