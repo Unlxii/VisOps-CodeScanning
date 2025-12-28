@@ -312,7 +312,7 @@ export default function PipelineView({ scanId }: { scanId: string }) {
                           <td className="p-4 align-top">
                             <div className="flex flex-col gap-1">
                               {/* Title */}
-                              <div className="font-medium text-gray-900 line-clamp-2">
+                              <div className="ฟfont-medium text-gray-900 line-clamp-2">
                                 {item.title || item.pkgName}
                               </div>
                               {/* Metadata Row: Tool Badge + ID */}

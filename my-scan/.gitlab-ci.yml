@@ -18,30 +18,23 @@ variables:
   KANIKO_VERSION: "v1.23.1-debug"
   CRANE_VERSION: "debug"
   
-  # Default Values
   PROJECT_NAME: "${PROJECT_NAME:-scanned-project}"
   USER_TAG: "${USER_TAG:-latest}"
-  
-  IMAGE_NAME: index.docker.io/$DOCKER_USER/$PROJECT_NAME
-  TEMP_IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+  IMAGE_NAME: "index.docker.io/$DOCKER_USER/$PROJECT_NAME"
+  TEMP_IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
   TRIVY_CACHE_DIR: ".trivycache/"
   TRIVY_NO_PROGRESS: "true"
 
-# --- Template: Script for Cloning Code (แก้ใหม่ รองรับ Private) ---
+# --- Clone Template ---
 .clone_logic: &clone_and_fix
   - echo "Initializing Git logic..."
   - if [ -z "$USER_REPO_URL" ]; then echo "USER_REPO_URL is missing"; exit 1; fi
   - if ! command -v git &> /dev/null; then apk add --no-cache git; fi
   
-  # --- FIX: Logic รองรับ Private Repo ---
   - |
     if [ -n "$GIT_USERNAME" ] && [ -n "$GIT_TOKEN" ]; then
       echo "Private Repository detected. Authenticating..."
-      
-      # ลบ https:// หรือ http:// ออกจาก URL เดิมก่อน (เพื่อไม่ให้ซ้ำ)
       CLEAN_URL=$(echo "$USER_REPO_URL" | sed -e 's|^https://||' -e 's|^http://||')
-      
-      # สร้าง URL ใหม่แบบฝัง Credential: https://user:token@domain.com/repo
       git clone "https://${GIT_USERNAME}:${GIT_TOKEN}@${CLEAN_URL}" project_temp
     else
       echo "Public Repository detected (or no creds provided)."
@@ -57,13 +50,13 @@ variables:
 # 1. Fetch Source
 fetch_source_minified:
   stage: setup
-  image: 
+  image:
     name: alpine/git:2.45.2
     entrypoint: [""]
   retry: 2
   script:
     - *clone_and_fix
-    - echo "Removing .git history to save artifact size..."
+    - echo "Removing .git history..."
     - rm -rf .git
   artifacts:
     paths: ["."]
@@ -72,7 +65,7 @@ fetch_source_minified:
 # 2. Gitleaks
 gitleaks_scan:
   stage: security_audit
-  image: 
+  image:
     name: zricethezav/gitleaks:$GITLEAKS_VERSION
     entrypoint: [""]
   retry: 2
@@ -88,7 +81,7 @@ gitleaks_scan:
 # 3. Semgrep
 semgrep_scan:
   stage: security_audit
-  image: 
+  image:
     name: returntocorp/semgrep:$SEMGREP_VERSION
     entrypoint: [""]
   retry: 2
@@ -108,16 +101,34 @@ build_and_push:
     name: gcr.io/kaniko-project/executor:$KANIKO_VERSION
     entrypoint: [""]
   script:
-    - echo " Starting Build Process..."
+    - echo "Starting Build Process..."
+    
+    # Context Path Setup
+    - export CONTEXT_PATH="${BUILD_CONTEXT:-.}"
+    - echo "Build Context is $CONTEXT_PATH"
 
-    # LOGIC Check User Dockerfile vs System Template
+    - echo "Checking content..."
+    - ls -la
+
+    # Dockerfile Logic Block
     - |
-      if [ -f "Dockerfile" ]; then
-        echo " Found User's Dockerfile! Using repository version."
-        echo "   (Skipping auto-detection and template fetching)"
+      if [ -f "Dockerfile.manual" ]; then
+        echo "Found Custom Dockerfile from Web Form."
+        if [ "$CONTEXT_PATH" != "." ]; then
+           echo "Moving Dockerfile.manual to $CONTEXT_PATH/Dockerfile..."
+           mkdir -p "$CONTEXT_PATH"
+           mv Dockerfile.manual "$CONTEXT_PATH/Dockerfile"
+        else
+           mv Dockerfile.manual Dockerfile
+        fi
+      elif [ -f "$CONTEXT_PATH/Dockerfile" ]; then
+        echo "Found Dockerfile in Repository at $CONTEXT_PATH."
+        echo "Using existing file."
       else
-        echo "No Dockerfile found in root."
-        echo "Auto-detecting Tech Stack..."
+        echo "No Dockerfile found. Auto-detecting Stack..."
+        if [ "$CONTEXT_PATH" != "." ] && [ -d "$CONTEXT_PATH" ]; then
+           cd "$CONTEXT_PATH"
+        fi
         
         STACK="default"
         if [ -f "package.json" ]; then STACK="node"; fi
@@ -125,40 +136,42 @@ build_and_push:
         if [ -f "pom.xml" ]; then STACK="java"; fi
         if [ -f "go.mod" ]; then STACK="go"; fi
         
-        echo "Detected Stack: $STACK"
-        echo "Fetching Template from Backend ($BACKEND_HOST_URL)..."
+        echo "Detected Stack is $STACK"
         
-        # ติดตั้ง curl ถ้าไม่มี
-        if ! command -v curl &> /dev/null; then apk add --no-cache curl; fi
+        if [ "$CONTEXT_PATH" != "." ]; then cd -; fi
+
+        if [ -z "$BACKEND_HOST_URL" ]; then echo "Error Backend URL missing"; exit 1; fi
+
+        echo "Fetching Template..."
+        wget --header="x-api-key: $API_KEY" -O Dockerfile_temp "$BACKEND_HOST_URL/api/templates?stack=$STACK"
         
-        # ยิงไปขอ Dockerfile จาก Database ของเรา
-        HTTP_STATUS=$(curl -s -o Dockerfile -w "%{http_code}" -H "x-api-key: $API_KEY" "$BACKEND_HOST_URL/api/templates?stack=$STACK")
+        if [ ! -s Dockerfile_temp ]; then echo "Error fetching template"; exit 1; fi
         
-        if [ "$HTTP_STATUS" -ne 200 ]; then
-          echo " Error: Failed to fetch template. Status: $HTTP_STATUS"
-          echo "   Please add a Dockerfile to your repo or contact admin."
-          exit 1
+        if [ "$CONTEXT_PATH" != "." ]; then
+           mv Dockerfile_temp "$CONTEXT_PATH/Dockerfile"
+        else
+           mv Dockerfile_temp Dockerfile
         fi
-        
-        echo "Template fetched successfully!"
+        echo "Template setup complete."
       fi
 
-    # Run Kaniko Build
-    - echo "Building Docker Image..."
-    
-    # Setup Docker Config (Auth)
+    # Kaniko Execution
+    - echo "Building Image..."
     - mkdir -p /kaniko/.docker
     - AUTH_STR=$(echo -n "$DOCKER_USER:$DOCKER_PASSWORD" | base64 | tr -d '\n')
     - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"auth\":\"$AUTH_STR\"},\"index.docker.io\":{\"auth\":\"$AUTH_STR\"}}}" > /kaniko/.docker/config.json
     
-    # สั่ง Build (Kaniko จะใช้ไฟล์ชื่อ "Dockerfile" ที่อยู่ในโฟลเดอร์ปัจจุบัน)
-    # ซึ่งอาจจะเป็นไฟล์ของ User หรือไฟล์ที่เราโหลดมาก็ได้
-    - /kaniko/executor --context "." --dockerfile "Dockerfile" --destination $IMAGE_NAME:$TEMP_IMAGE_TAG --cache=true
+    #  FIX: ใช้ Backslash แทน >- เพื่อความชัวร์เรื่อง Syntax
+    - /kaniko/executor
+      --context "$CI_PROJECT_DIR/$CONTEXT_PATH"
+      --dockerfile "$CI_PROJECT_DIR/$CONTEXT_PATH/Dockerfile"
+      --destination "$IMAGE_NAME:$TEMP_IMAGE_TAG"
+      --cache=true
 
-# 5. Trivy
+# 5. Trivy Scan
 trivy_scan:
   stage: container_scan
-  image: 
+  image:
     name: aquasec/trivy:$TRIVY_VERSION
     entrypoint: [""]
   variables:
@@ -167,8 +180,7 @@ trivy_scan:
     TRIVY_CACHE_DIR: ".trivycache/"
   cache:
     key: trivy-db-cache-protected
-    paths:
-      - .trivycache/
+    paths: [.trivycache/]
     policy: pull-push
   retry: 2
   script:
@@ -176,15 +188,15 @@ trivy_scan:
     - if ! command -v wget &> /dev/null; then apk add --no-cache wget; fi
     - wget https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl -O html.tpl
     
-    - echo "Scanning Remote Image ($IMAGE_NAME:$TEMP_IMAGE_TAG)..."
-    - trivy image --format template --template "@html.tpl" -o trivy-report.html --scanners vuln $IMAGE_NAME:$TEMP_IMAGE_TAG
-    - trivy image --format json -o trivy-report.json --scanners vuln $IMAGE_NAME:$TEMP_IMAGE_TAG
+    - echo "Scanning Remote Image..."
+    - trivy image --format template --template "@html.tpl" -o trivy-report.html --scanners vuln "$IMAGE_NAME:$TEMP_IMAGE_TAG"
+    - trivy image --format json -o trivy-report.json --scanners vuln "$IMAGE_NAME:$TEMP_IMAGE_TAG"
   allow_failure: true
   artifacts:
     paths: [trivy-report.json, trivy-report.html]
     when: always
 
-# 6. Release
+# 6. Release & Webhook
 push_to_hub:
   stage: release
   image:
@@ -194,44 +206,40 @@ push_to_hub:
   dependencies: [trivy_scan]
   script:
     - echo "Promoting image..."
-    - if [ -z "$DOCKER_USER" ]; then echo "No Docker Creds, Skipping."; exit 0; fi
+    - if [ -z "$DOCKER_USER" ]; then echo "No Docker Creds Skipping."; exit 0; fi
     
-    # Debug JSON
-    - echo "--- DEBUG JSON CONTENT ---"
-    - if [ -f trivy-report.json ]; then head -n 20 trivy-report.json; else echo "File not found"; fi
-    - echo "--------------------------"
-
-    # Check Vulnerabilities
+    # Check Critical Vulns
     - |
       CRITICAL_COUNT=0
       if [ -f trivy-report.json ]; then
         CRITICAL_COUNT=$(grep -c "Severity.*CRITICAL" trivy-report.json || true)
       fi
-      
       CRITICAL_COUNT=$(echo $CRITICAL_COUNT | tr -d ' ')
-      if [ -z "$CRITICAL_COUNT" ]; then CRITICAL_COUNT=0; fi
+      [ -z "$CRITICAL_COUNT" ] && CRITICAL_COUNT=0
       
       echo "Found $CRITICAL_COUNT critical vulnerabilities."
 
       TARGET_TAG="$USER_TAG"
       if [ "$CRITICAL_COUNT" -gt 0 ]; then
-        echo "CRITICAL ISSUES FOUND! Appending '-warning' to tag."
+        echo "CRITICAL ISSUES FOUND Appending warning."
         TARGET_TAG="${USER_TAG}-warning"
-      else
-        echo "No critical issues. Using requested tag."
       fi
 
-      echo "Final Image: $IMAGE_NAME:$TARGET_TAG"
+      echo "Final Image is $IMAGE_NAME:$TARGET_TAG"
       
-      # 1. Login
       crane auth login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD" index.docker.io
-      
-      # 2. Promote
-      echo "Copying to final tag..."
       crane cp "$IMAGE_NAME:$TEMP_IMAGE_TAG" "$IMAGE_NAME:$TARGET_TAG"
+      crane delete "$IMAGE_NAME:$TEMP_IMAGE_TAG" || echo "Warning Failed cleanup."
+      
+      # Webhook
+      if command -v curl &> /dev/null; then
+        curl -X POST -H "Content-Type: application/json" \
+        -d "{\"scanId\": \"$CI_PROJECT_ID\", \"status\": \"SUCCESS\", \"vulnCritical\": $CRITICAL_COUNT}" \
+        "$BACKEND_HOST_URL/api/scan/webhook"
+      else
+        wget --header="Content-Type: application/json" \
+        --post-data="{\"scanId\": \"$CI_PROJECT_ID\", \"status\": \"SUCCESS\", \"vulnCritical\": $CRITICAL_COUNT}" \
+        "$BACKEND_HOST_URL/api/scan/webhook"
+      fi
 
-      # 3. Cleanup
-      echo "Cleaning up temporary tag ($TEMP_IMAGE_TAG)..."
-      crane delete "$IMAGE_NAME:$TEMP_IMAGE_TAG" || echo "Warning: Failed to delete temp tag, but promotion succeeded."
-    
   when: manual

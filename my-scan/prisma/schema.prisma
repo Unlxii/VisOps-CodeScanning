@@ -18,6 +18,8 @@ model DockerTemplate {
 // เก็บประวัติการสแกน (User Scan History)
 model ScanHistory {
   id          String   @id @default(uuid())
+
+  userName     String   @default("anonymous")
   
   // ข้อมูล Project & User
   userName    String   // ใครเป็นคนสั่งสแกน

@@ -1,74 +1,111 @@
 "use client";
-import React, { useState } from "react";
 
-export default function ReleaseButton({ scanId }: { scanId: string }) {
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [isDone, setIsDone] = useState(false);
+import { useState, useEffect } from "react";
+import { UploadCloud, Loader2, AlertTriangle, Check } from "lucide-react";
 
-  async function onRelease() {
+export default function ConfirmBuildButton({ scanId }: { scanId: string }) {
+  const [status, setStatus] = useState<string>("loading");
+  const [vulnCount, setVulnCount] = useState(0);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deployResult, setDeployResult] = useState<string | null>(null);
+
+  // เช็คสถานะปัจจุบัน
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const res = await fetch(`/api/scan/status/${scanId}`);
+        const data = await res.json();
+        
+        if (data.status === "done" || data.status === "success") {
+            setStatus("ready");
+            setVulnCount(data.counts?.critical || 0);
+        } else if (data.status === "failed") {
+            setStatus("failed");
+        } else {
+            setStatus("running");
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    // เช็คทุก 3 วินาที
+    const interval = setInterval(checkStatus, 3000);
+    checkStatus(); // เช็คทันทีครั้งแรก
+    return () => clearInterval(interval);
+  }, [scanId]);
+
+  const handleRelease = async () => {
     if (!confirm("Are you sure you want to push this image to Docker Hub?")) return;
-
-    setLoading(true);
+    
+    setIsDeploying(true);
     try {
-      // เรายังใช้ API เดิมได้ (หรือจะเปลี่ยนชื่อ API ก็ได้ แต่ Logic ข้างในคือการกด Play Manual Job)
-      const res = await fetch(`/api/scan/confirm-push/${scanId}`, {
-        method: "POST",
+      const res = await fetch(`/api/scan/release/${scanId}`, {
+        method: "POST"
       });
-      const j = await res.json();
+      const data = await res.json();
       
       if (res.ok) {
-        setMessage("Release triggered! Image is being pushed to Docker Hub.");
-        setIsDone(true);
+        setDeployResult("success");
+        alert("Release triggered successfully! Check Docker Hub shortly.");
       } else {
-        setMessage(`Error: ${JSON.stringify(j)}`);
+        setDeployResult("error");
+        alert("Failed to release: " + data.error);
       }
     } catch (e) {
-      setMessage("Network error");
+      alert("Network error");
     } finally {
-      setLoading(false);
+      setIsDeploying(false);
     }
+  };
+
+  if (status === "loading" || status === "running") {
+    return null; // ยังไม่เสร็จ ไม่โชว์ปุ่ม
   }
 
-  if (isDone) {
-    return (
-        <div className="mt-4 p-3 bg-green-50 text-green-700 border border-green-200 rounded text-sm">
-            {message}
-        </div>
-    );
+  if (deployResult === "success") {
+      return (
+          <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg flex items-center gap-2">
+              <Check className="w-5 h-5" />
+              Image has been released to Docker Hub.
+          </div>
+      );
   }
 
   return (
-    <div className="mt-4">
-      <h3 className="text-sm font-medium text-gray-900 mb-2">Actions</h3>
+    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+      <h3 className="text-lg font-semibold text-slate-800 mb-2">Release Management</h3>
+      <p className="text-sm text-slate-500 mb-4">
+        Once the scan is complete and you have reviewed the findings, you can manually trigger the push to Docker Hub.
+      </p>
+
+      {vulnCount > 0 && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-md text-sm flex items-start gap-2">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <div>
+            <strong>Warning:</strong> Found {vulnCount} critical vulnerabilities. 
+            The image tag will have <code>-warning</code> appended automatically.
+          </div>
+        </div>
+      )}
+
       <button
-        onClick={onRelease}
-        disabled={loading}
-        className={`flex items-center px-4 py-2 rounded text-white font-medium transition-colors
-          ${loading 
-            ? "bg-gray-400 cursor-not-allowed" 
-            : "bg-blue-600 hover:bg-blue-700"}`}
+        onClick={handleRelease}
+        disabled={isDeploying || status === "failed"}
+        className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium text-white transition-all
+          ${isDeploying ? "bg-slate-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg"}
+        `}
       >
-        {loading ? (
-           <>
-             <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-             </svg>
-             Pushing to Docker Hub...
-           </>
+        {isDeploying ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" /> Processing...
+          </>
         ) : (
-           "Push to Docker Hub"
+          <>
+            <UploadCloud className="w-5 h-5" /> Push to Docker Hub
+          </>
         )}
       </button>
-      
-      {message && !isDone && (
-        <div className="mt-2 text-sm text-red-600">{message}</div>
-      )}
-      
-      <p className="mt-2 text-xs text-gray-500">
-        * This will trigger the final stage to upload the verified image.
-      </p>
     </div>
   );
 }

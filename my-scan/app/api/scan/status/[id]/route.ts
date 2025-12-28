@@ -1,10 +1,8 @@
-// /app/api/scan/status/[id]/route.ts
 import { NextResponse } from "next/server";
 import axios from "axios";
 import https from "https";
 
-// --- Types & Interfaces ---
-
+// --- Types ---
 type VulnerabilityFinding = {
   id: string;
   pkgName: string;
@@ -12,19 +10,17 @@ type VulnerabilityFinding = {
   fixedVersion?: string;
   severity: string;
   title?: string;
-  sourceTool: "Trivy" | "Gitleaks" | "Semgrep"; // เพิ่ม field นี้เพื่อรู้ว่ามาจากตัวไหน
+  sourceTool: "Trivy" | "Gitleaks" | "Semgrep";
 };
 
-// Helper: แปลง Severity ของ Semgrep เป็นมาตรฐานเดียวกัน
 function mapSemgrepSeverity(sev: string): string {
   const s = sev.toUpperCase();
   if (s === "ERROR") return "high";
   if (s === "WARNING") return "medium";
   if (s === "INFO") return "low";
-  return "medium"; // Default
+  return "medium";
 }
 
-// Helper: คำนวณเวลา
 function formatDuration(seconds: number) {
   if (!seconds) return "N/A";
   const m = Math.floor(seconds / 60);
@@ -38,7 +34,6 @@ export async function GET(
 ) {
   const { id } = await params;
   
-  // Config
   const baseUrl = process.env.GITLAB_API_URL?.replace(/\/$/, "");
   const token = process.env.GITLAB_TOKEN;
   const agent = new https.Agent({ rejectUnauthorized: false });
@@ -48,7 +43,7 @@ export async function GET(
   }
 
   try {
-    // 1. Get Pipeline Info
+    // 1. ดึงข้อมูล Pipeline จาก GitLab
     const pipelineRes = await axios.get(
       `${baseUrl}/api/v4/projects/${id}/pipelines`,
       {
@@ -63,7 +58,6 @@ export async function GET(
     const pipeline = pipelineRes.data[0];
     const status = pipeline.status;
     
-    // Calculate Duration
     let durationString = "Pending...";
     if (pipeline.created_at && pipeline.updated_at) {
         const start = new Date(pipeline.created_at).getTime();
@@ -71,12 +65,11 @@ export async function GET(
         durationString = formatDuration((end - start) / 1000);
     }
 
-    // Init Response Data
     let counts = { critical: 0, high: 0, medium: 0, low: 0 };
     let findings: VulnerabilityFinding[] = [];
     let logs: string[] = [`Pipeline: ${pipeline.id}`, `Status: ${status.toUpperCase()}`];
 
-    // 2. ถ้า Success ให้ดึง Report จากทั้ง 3 Tools
+    // 2. ถ้าสถานะเป็น Success ให้ไปดึงไฟล์ Artifacts
     if (status === "success") {
       logs.push("Fetching reports from Trivy, Gitleaks, Semgrep...");
       
@@ -87,14 +80,12 @@ export async function GET(
       
       const jobs = jobsRes.data;
 
-      // Define Scanners Config
       const scanners = [
         {
           name: "Trivy",
-          jobName: "trivy_scan", // *ต้องตรงกับชื่อใน .gitlab-ci.yml*
+          jobName: "trivy_scan",
           artifact: "trivy-report.json",
           parser: (report: any) => {
-             // Trivy Logic
              if(!report.Results) return;
              report.Results.forEach((res: any) => {
                if(res.Vulnerabilities) {
@@ -117,18 +108,15 @@ export async function GET(
         },
         {
           name: "Gitleaks",
-          jobName: "gitleaks_scan", // *ต้องตรงกับชื่อใน .gitlab-ci.yml*
+          jobName: "gitleaks_scan",
           artifact: "gitleaks-report.json",
           parser: (report: any) => {
-             // Gitleaks Logic (Report มักจะเป็น Array ของ Objects)
-             // Gitleaks report is usually an array: [{RuleID:..., File:..., Secret:...}]
              const leaks = Array.isArray(report) ? report : [];
              leaks.forEach((leak: any) => {
-               // Secret leaks are almost always Critical
                findings.push({
                  id: leak.RuleID || "SECRET-LEAK",
                  pkgName: leak.File || "Unknown File",
-                 installedVersion: "N/A", // Secret ไม่มี version
+                 installedVersion: "N/A",
                  fixedVersion: "Revoke Secret",
                  severity: "critical",
                  title: `Secret exposed in ${leak.File}`,
@@ -140,13 +128,12 @@ export async function GET(
         },
         {
           name: "Semgrep",
-          jobName: "semgrep_scan", // *ต้องตรงกับชื่อใน .gitlab-ci.yml*
+          jobName: "semgrep_scan",
           artifact: "semgrep-report.json",
           parser: (report: any) => {
-             // Semgrep Logic (report.results array)
              if(!report.results) return;
              report.results.forEach((res: any) => {
-               const semgrepSev = res.extra?.severity || "WARNING"; // ERROR, WARNING, INFO
+               const semgrepSev = res.extra?.severity || "WARNING";
                const normalizedSev = mapSemgrepSeverity(semgrepSev);
                
                findings.push({
@@ -164,7 +151,6 @@ export async function GET(
         }
       ];
 
-      // Helper to count
       const incrementCount = (sev: string) => {
          if(sev === 'critical') counts.critical++;
          else if(sev === 'high') counts.high++;
@@ -172,11 +158,11 @@ export async function GET(
          else if(sev === 'low') counts.low++;
       };
 
-      // 3. Process each scanner in parallel
+      // 3. วนลูปดึงข้อมูลจาก Scanner แต่ละตัว
       await Promise.all(scanners.map(async (scanner) => {
         const job = jobs.find((j: any) => j.name === scanner.jobName);
         if (!job) {
-          logs.push(`⚠️ Job '${scanner.jobName}' not found.`);
+          logs.push(`Job '${scanner.jobName}' not found.`);
           return;
         }
 
@@ -186,19 +172,17 @@ export async function GET(
             { headers: { "PRIVATE-TOKEN": token }, httpsAgent: agent, responseType: "json" }
           );
           
-          logs.push(`✅ Parsed ${scanner.name} report.`);
+          logs.push(`Parsed ${scanner.name} report.`);
           scanner.parser(res.data);
           
         } catch (err) {
-          console.error(`Error fetching ${scanner.name}:`, err);
-          logs.push(`❌ Failed to fetch/parse ${scanner.name}.`);
+          logs.push(`Failed to fetch/parse ${scanner.name}.`);
         }
       }));
       
       logs.push(`Total findings: ${findings.length}`);
     }
 
-    // Response
     return NextResponse.json({
       id: pipeline.id.toString(),
       repoUrl: pipeline.web_url.split('/-/')[0],
