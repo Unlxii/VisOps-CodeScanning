@@ -7,109 +7,223 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---------------------------------------------------------
-// 1. Admin Configuration
-// ---------------------------------------------------------
 
-// เก็บ Template Dockerfile (Admin แก้ได้)
+//NextAuth Models (สำหรับระบบ Login)
+
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // เผื่อใช้ Login แบบปกติ
+
+  // Onboarding & Setup
+  isSetupComplete Boolean  @default(false)
+  role            String   @default("user") // "user" | "admin"
+
+  // GitHub Personal Access Token (Encrypted AES-256)
+  githubPAT       String?  @db.Text
+  githubUsername  String?
+  
+  // Docker Hub Token (Encrypted AES-256)
+  dockerToken     String?  @db.Text
+  dockerUsername  String?
+  
+  // Legacy fields (keep for backward compatibility)
+  defaultGitUser     String?
+  defaultGitToken    String?  // เก็บแบบ Encrypted
+  defaultDockerUser  String?
+  defaultDockerToken String?  // เก็บแบบ Encrypted
+  
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Relation กับโปรเจกต์ของเรา
+  groups        ProjectGroup[] 
+  supportTickets SupportTicket[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+
+//Admin Configuration
+
+
 model DockerTemplate {
   id        String   @id @default(uuid())
-  stack     String   @unique // node, python, java, go, default
-  content   String   // เนื้อหา Dockerfile
+  stack     String   @unique 
+  content   String   
   updatedAt DateTime @updatedAt
 }
 
-// ---------------------------------------------------------
-// 2. User & Project Structure
-// ---------------------------------------------------------
+//Project Structure
 
-// เก็บข้อมูลผู้ใช้ (เพื่อเช็ค Quota 6 Images)
-model UserProfile {
-  email     String         @id
-  groups    ProjectGroup[] // 1 User มีได้หลาย Project Groups
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-}
-
-// ตัวแทนของ "Git Repository" (Project ใหญ่)
-// เก็บ Git Creds ที่นี่ เพราะใช้ร่วมกันในทุก Service ลูก
 model ProjectGroup {
   id        String   @id @default(uuid())
-  groupName String   // ชื่อโปรเจกต์ที่ตั้งเอง เช่น "E-Commerce-App"
-  repoUrl   String   // https://github.com/user/repo.git
+  groupName String   
+  repoUrl   String   
 
-  // Git Credentials (Encrypted)
   isPrivate Boolean  @default(false)
   gitUser   String?
-  gitToken  String?  // เก็บแบบ Encrypted
+  gitToken  String?  
 
-  // Relation to User
-  userEmail String
-  user      UserProfile @relation(fields: [userEmail], references: [email])
+  // Quota Management
+  isActive  Boolean  @default(true) // false if deleted/archived
 
-  // Relation to Services
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   services  ProjectService[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  @@index([userId, isActive])
 }
 
-// ตัวแทนของ "Docker Image" หรือ "Service ย่อย"
-// เช่น Backend, Frontend (นับ Quota จากตารางนี้)
 model ProjectService {
   id          String   @id @default(uuid())
-  serviceName String   // ชื่อ Service เช่น "backend-api"
-  contextPath String   // โฟลเดอร์ที่จะ Build เช่น "./backend" (หรือ "." ถ้าเป็น Root)
+  serviceName String   
+  contextPath String   
   
-  // Docker Configuration
-  imageName   String   // ชื่อ Image ปลายทาง (index.docker.io/user/repo)
-  
-  // Docker Credentials (Encrypted) 
-  // แยกเก็บที่นี่ เผื่อแต่ละ Service ใช้ User/Registry ต่างกัน
+  imageName   String   
   dockerUser  String?
-  dockerToken String?  // เก็บแบบ Encrypted
+  dockerToken String?  
 
-  // Custom Dockerfile (ถ้า User แก้ไขเอง)
-  useCustomDockerfile Boolean @default(false)
-  dockerfileContent   String? // เก็บเนื้อหาที่แก้
+  // Dockerfile Override (Admin/System can inject custom Dockerfile)
+  useCustomDockerfile  Boolean @default(false)
+  dockerfileContent    String? @db.Text
+  dockerfileOverrideBy String? // admin user ID who overrode
+  
+  // Language detection for auto-generation
+  detectedLanguage     String? // "node" | "python" | "go" | "java"
 
-  // Relation to Group
   groupId     String
   group       ProjectGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  // Relation to History
   scans       ScanHistory[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  lastScanAt  DateTime?
 }
 
-// ---------------------------------------------------------
-// 3. Scan Results (History)
-// ---------------------------------------------------------
 
-// เก็บประวัติการสแกน (ผูกกับ Service)
+//Scan Results
+
+
 model ScanHistory {
-  id            String   @id @default(uuid())
+  id           String   @id @default(uuid())
 
-  // เชื่อมกับ Service ไหน
-  serviceId     String
-  service       ProjectService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId    String
+  service      ProjectService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-  // ข้อมูล ณ ตอนสแกน (Snapshot)
-  status        String   @default("PENDING") // PENDING, SUCCESS, FAILED, BLOCKED
+  // Job Queue & Status Management
+  status       String   @default("QUEUED") // "QUEUED" | "PROCESSING" | "PASSED" | "FAILED_SECURITY" | "FAILED_BUILD" | "CANCELLED"
+  scanMode     String   @default("SCAN_AND_BUILD") // "SCAN_ONLY" | "SCAN_AND_BUILD"
   
-  // ข้อมูล Pipeline
-  scanId        String   // GitLab Project ID
-  pipelineId    String?  // GitLab Pipeline ID (#123)
+  scanId       String   
+  pipelineId   String?  @unique // ควรใส่ @unique เพื่อให้ค้นหาได้ไว
+  jobId        String?  @unique // Redis Queue Job ID
   
-  // ผลลัพธ์ความปลอดภัย
-  vulnCritical  Int      @default(0)
-  vulnHigh      Int      @default(0)
-  imageTag      String   // Tag ที่ถูกสร้างในรอบนี้ (เช่น v1.0, latest-abc)
+  // Vulnerability Counts
+  vulnCritical Int      @default(0)
+  vulnHigh     Int      @default(0)
+  vulnMedium   Int      @default(0)
+  vulnLow      Int      @default(0)
   
-  details       Json?    // เก็บ Error log หรือข้อมูลเพิ่มเติม
+  imageTag     String   
+  imagePushed  Boolean  @default(false) // true if pushed to Docker Hub
   
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  // Structured Report (SARIF/JSON format)
+  reportJson   Json?    @db.JsonB
+  
+  // Build Logs
+  buildLogs    String?  @db.Text
+  errorMessage String?  @db.Text
+  
+  // History Tracking (Latest vs Previous)
+  isLatest     Boolean  @default(true)
+  previousScanId String? // Reference to previous scan for comparison
+  
+  // Critical Resolution
+  isCriticalAcknowledged Boolean @default(false)
+  acknowledgedAt        DateTime?
+  acknowledgedBy        String?
+  
+  // Timestamps
+  queuedAt     DateTime @default(now())
+  startedAt    DateTime?
+  completedAt  DateTime?
+  
+  details      Json?    // Legacy field
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([serviceId, isLatest])
+  @@index([status, queuedAt])
+}
+
+// Support Ticket System
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  subject     String
+  message     String   @db.Text
+  status      String   @default("OPEN") // "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED"
+  priority    String   @default("NORMAL") // "LOW" | "NORMAL" | "HIGH" | "URGENT"
+  
+  // Admin Response
+  adminReply  String?  @db.Text
+  adminId     String?
+  resolvedAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId, status])
+  @@index([status, priority])
 }

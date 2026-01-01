@@ -3,20 +3,12 @@
 import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
-  Trash2, AlertTriangle, X, Loader2, Lock, Unlock, 
-  FileText, Code2, LayoutTemplate, Save, Check, FolderTree, 
-  GitBranch, Server, CheckCircle2, XCircle, Info, Box, Tag, HelpCircle
+  Loader2, Lock, FileText, Code2, LayoutTemplate, Save, FolderTree, 
+  GitBranch, Server, CheckCircle2, XCircle, Info, Box, Tag, HelpCircle, AlertTriangle, X
 } from "lucide-react";
 
 type Props = {
   buildMode: boolean;
-};
-
-type ProjectItem = {
-  id: number;
-  name: string;
-  webUrl: string;
-  createdAt: string;
 };
 
 // --- Helper: Tooltip Component ---
@@ -25,7 +17,6 @@ const InfoTooltip = ({ text }: { text: string }) => (
     <HelpCircle size={14} className="text-slate-400 hover:text-blue-500 cursor-help transition-colors" />
     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 bg-slate-800 text-white text-[10px] leading-tight rounded shadow-lg z-50 animate-in fade-in zoom-in-95 duration-200">
       {text}
-      {/* Arrow */}
       <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
     </div>
   </div>
@@ -61,13 +52,12 @@ function ScanFormContent({ buildMode }: Props) {
   const searchParams = useSearchParams();
   const buildDirInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Get values from URL
   const paramRepo = searchParams.get("repo") || "";
   const paramContext = searchParams.get("context") || "";
   const isContinuityMode = !!paramRepo;
 
-  // --- State: User ---
-  const [email, setEmail] = useState("user@example.com"); 
+  // --- State: Defaults ---
+  const [hasDefaults, setHasDefaults] = useState({ git: false, docker: false });
 
   // --- State: Repository ---
   const [repoUrl, setRepoUrl] = useState(paramRepo);
@@ -102,20 +92,29 @@ function ScanFormContent({ buildMode }: Props) {
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [limitMessage, setLimitMessage] = useState("");
 
-  // Update from URL
+  // Check Defaults on Mount
+  useEffect(() => {
+    fetch("/api/user/settings").then(r => r.json()).then(d => {
+        setHasDefaults({
+            git: d.hasGitToken,
+            docker: d.hasDockerToken
+        });
+        if(d.gitUser && !gitUser) setGitUser(d.gitUser);
+        if(d.dockerUser && !dockerUser) setDockerUser(d.dockerUser);
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (paramRepo) setRepoUrl(paramRepo);
     if (paramContext) setBuildContext(paramContext);
   }, [paramRepo, paramContext]);
 
-  // Focus Logic
   useEffect(() => {
     if (isContinuityMode && buildDirInputRef.current) {
         setTimeout(() => buildDirInputRef.current?.focus(), 100);
     }
   }, [isContinuityMode]);
 
-  // --- Auto-fill Logic ---
   useEffect(() => {
     if (!repoUrl) return;
     try {
@@ -133,9 +132,6 @@ function ScanFormContent({ buildMode }: Props) {
       setRepoOwner(rOwner);
       if (!groupName) setGroupName(rName);
 
-      // Auto-set Image Name logic
-      
-      // สร้าง Suffix
       let suffix = "";
       if (buildContext && buildContext !== ".") {
           suffix = `-${buildContext.replace(/\//g, '-')}`;
@@ -145,7 +141,6 @@ function ScanFormContent({ buildMode }: Props) {
       
       const autoImage = `${rName}${suffix}`.toLowerCase().replace(/[^a-z0-9-_]/g, "");
       
-      // อัปเดตเฉพาะเมื่อ ImageName ยังว่างอยู่
       if(!imageName) {
           setImageName(autoImage);
       }
@@ -153,30 +148,41 @@ function ScanFormContent({ buildMode }: Props) {
     } catch (e) {}
   }, [repoUrl, serviceName, buildContext]);
 
-  // Validators
   const validateGit = async () => {
-    if (!gitToken) return alert("Please enter Git Token");
+    if (!gitToken && !hasDefaults.git) return alert("Please enter Git Token");
     setGitValidating(true);
     try {
-      const res = await fetch("/api/validate", {
-        method: "POST", body: JSON.stringify({ type: "github", token: gitToken })
-      });
-      const data = await res.json();
-      setGitValid(data.valid);
-      if (!data.valid) alert("GitHub Token Invalid!");
+      const tokenToCheck = gitToken || "default_check_skipped"; 
+      if(tokenToCheck === "default_check_skipped") {
+          setGitValid(true); 
+          alert("Using saved default token.");
+      } else {
+          const res = await fetch("/api/validate", {
+            method: "POST", body: JSON.stringify({ type: "github", token: gitToken })
+          });
+          const data = await res.json();
+          setGitValid(data.valid);
+          if (!data.valid) alert("GitHub Token Invalid!");
+      }
     } finally { setGitValidating(false); }
   };
 
   const validateDocker = async () => {
-    if (!dockerUser || !dockerToken) return alert("Please enter Docker User & Token");
+    if (!dockerUser || (!dockerToken && !hasDefaults.docker)) return alert("Please enter Docker User & Token");
     setDockerValidating(true);
     try {
-      const res = await fetch("/api/validate", {
-        method: "POST", body: JSON.stringify({ type: "docker", username: dockerUser, token: dockerToken })
-      });
-      const data = await res.json();
-      setDockerValid(data.valid);
-      if (!data.valid) alert("Docker Credentials Invalid!");
+      const tokenToCheck = dockerToken || "default_check_skipped";
+      if (tokenToCheck === "default_check_skipped") {
+          setDockerValid(true);
+          alert("Using saved default token.");
+      } else {
+          const res = await fetch("/api/validate", {
+            method: "POST", body: JSON.stringify({ type: "docker", username: dockerUser, token: dockerToken })
+          });
+          const data = await res.json();
+          setDockerValid(data.valid);
+          if (!data.valid) alert("Docker Credentials Invalid!");
+      }
     } finally { setDockerValidating(false); }
   };
 
@@ -201,11 +207,9 @@ function ScanFormContent({ buildMode }: Props) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     
-    // 0. Validate Inputs
     if (!serviceName) return alert("Please enter a Service Name.");
     if (buildMode && !dockerUser) return alert("Please enter Docker Username.");
 
-    // 1. Validate Token Check
     if (isPrivateRepo && !gitValid && gitToken) {
        if(!confirm("Git Token hasn't been validated. Continue?")) return;
     }
@@ -216,26 +220,21 @@ function ScanFormContent({ buildMode }: Props) {
     setLoading(true);
 
     try {
-      // Step 2: Create Project Structure
       const createRes = await fetch("/api/projects/create", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-            email,
             isNewGroup: true,
             groupName,
             repoUrl: repoUrl.trim(),
             isPrivate: isPrivateRepo,
             gitUser,
-            gitToken,
+            gitToken, // Can be empty if using default
             serviceName,
             contextPath: buildContext.trim() || ".",
-            
-            // ส่ง Image Config
             imageName: imageName.trim(),
-            
             dockerUser,
-            dockerToken,
+            dockerToken, // Can be empty if using default
             customDockerfile: useCustomDockerfile ? customDockerfileContent : undefined
         }),
       });
@@ -252,20 +251,17 @@ function ScanFormContent({ buildMode }: Props) {
         throw new Error(createData.message || "Failed to create project");
       }
 
-      // Step 3: Start Scan
       const scanRes = await fetch("/api/scan/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ 
             serviceId: createData.serviceId,
-            imageTag: imageTag.trim() || "latest" // ส่ง Tag ไปด้วย
+            imageTag: imageTag.trim() || "latest"
         }),
       });
 
       const scanData = await scanRes.json();
 
-      // ✅ แก้ไข: ใช้ pipelineId ในการ Redirect (แทน scanId)
-      // เพราะ scanId คือ ID ของ Engine กลาง (ซ้ำกันทุกคน) แต่ pipelineId คือ ID ของการรันรอบนี้ (ไม่ซ้ำ)
       if (scanRes.ok && scanData.pipelineId) {
         router.push(`/scan/${scanData.pipelineId}`);
       } else {
@@ -283,7 +279,6 @@ function ScanFormContent({ buildMode }: Props) {
       <div className="flex justify-center">
       <form onSubmit={onSubmit} className="w-full max-w-xl p-6 space-y-6 bg-white rounded-xl border border-slate-200 shadow-sm mt-6 relative z-10">
         
-        {/* Banner Monorepo */}
         {isContinuityMode && (
            <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-lg flex items-start justify-between gap-3 animate-in slide-in-from-top-2">
                <div className="flex items-start gap-3">
@@ -359,9 +354,21 @@ function ScanFormContent({ buildMode }: Props) {
                  </div>
                  {isPrivateRepo && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pl-6 border-l-2 border-slate-200 animate-in fade-in slide-in-from-top-1">
-                        <input type="text" value={gitUser} onChange={e => setGitUser(e.target.value)} placeholder="Git Username" className="border p-2 rounded text-sm outline-none"/>
+                        <input 
+                            type="text" 
+                            value={gitUser} 
+                            onChange={e => setGitUser(e.target.value)} 
+                            placeholder="Git Username" 
+                            className="border p-2 rounded text-sm outline-none"
+                        />
                         <div className="relative">
-                            <input type="password" value={gitToken} onChange={e => setGitToken(e.target.value)} placeholder="Git Token" className="w-full border p-2 rounded text-sm outline-none"/>
+                            <input 
+                                type="password" 
+                                value={gitToken} 
+                                onChange={e => setGitToken(e.target.value)} 
+                                placeholder={hasDefaults.git ? "Saved Default (Leave empty)" : "Git Token"} 
+                                className="w-full border p-2 rounded text-sm outline-none"
+                            />
                             <TokenValidator isValid={gitValid} isValidating={gitValidating} onValidate={validateGit} />
                         </div>
                     </div>
@@ -377,12 +384,11 @@ function ScanFormContent({ buildMode }: Props) {
                 <Server size={14}/> Service & Build (Image)
             </h3>
 
-            {/* Service Name & Context */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="mb-1.5 font-semibold text-slate-700 text-sm flex items-center">
                         Service Name 
-                        <InfoTooltip text="A logical name to identify this service (e.g. 'backend', 'api', 'frontend'). It helps organize your scan history." />
+                        <InfoTooltip text="A logical name to identify this service. e.g. 'backend'." />
                     </label>
                     <input
                         type="text"
@@ -409,7 +415,6 @@ function ScanFormContent({ buildMode }: Props) {
                 </div>
             </div>
             
-            {/* Custom Dockerfile Button */}
             <div className="border rounded-lg p-3 bg-white border-slate-200 hover:border-blue-300 transition group flex justify-between items-center">
                  <div className="flex items-center gap-2">
                      <FileText size={16} className="text-slate-400 group-hover:text-blue-500"/>
@@ -421,41 +426,37 @@ function ScanFormContent({ buildMode }: Props) {
                  </button>
             </div>
 
-            {/* Docker Credentials & Image Config */}
             {buildMode && (
               <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4">
-                 
-                 {/* PREVIEW BOX */}
-                 <div className="bg-blue-100 p-3 rounded-lg border border-blue-200 text-xs text-blue-800">
-                    <p className="font-semibold uppercase tracking-wide mb-1 opacity-70 flex justify-between">
-                        <span>Target Image Preview</span>
-                        <span className="text-[10px] bg-blue-200 px-1.5 rounded text-blue-900">Auto-Generated</span>
-                    </p>
-                    <p className="font-mono break-all text-sm flex items-center gap-1">
-                       <Box size={14} />
-                       index.docker.io/<span className="font-bold">{dockerUser || "user"}</span>/<span className="font-bold">{imageName || "repo-service"}</span>:<span className="font-bold bg-yellow-100 px-1 rounded text-yellow-800 border border-yellow-200">{imageTag}</span>
-                    </p>
-                 </div>
+                  <div className="bg-blue-100 p-3 rounded-lg border border-blue-200 text-xs text-blue-800">
+                     <p className="font-semibold uppercase tracking-wide mb-1 opacity-70 flex justify-between">
+                         <span>Target Image Preview</span>
+                         <span className="text-[10px] bg-blue-200 px-1.5 rounded text-blue-900">Auto-Generated</span>
+                     </p>
+                     <p className="font-mono break-all text-sm flex items-center gap-1">
+                        <Box size={14} />
+                        index.docker.io/<span className="font-bold">{dockerUser || "user"}</span>/<span className="font-bold">{imageName || "repo-service"}</span>:<span className="font-bold bg-yellow-100 px-1 rounded text-yellow-800 border border-yellow-200">{imageTag}</span>
+                     </p>
+                  </div>
 
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block mb-1 text-xs font-semibold text-slate-500">Docker User</label>
                         <input value={dockerUser} onChange={(e) => setDockerUser(e.target.value)} placeholder="Docker Hub User" className="w-full border p-2 rounded text-sm outline-none bg-white" />
                     </div>
                     <div className="relative">
                         <label className="block mb-1 text-xs font-semibold text-slate-500">Docker Token</label>
-                        <input value={dockerToken} onChange={(e) => setDockerToken(e.target.value)} placeholder="Docker Hub Token" type="password" className="w-full border p-2 rounded text-sm outline-none bg-white" />
+                        <input value={dockerToken} onChange={(e) => setDockerToken(e.target.value)} placeholder={hasDefaults.docker ? "Saved Default (Leave empty)" : "Docker Hub Token"} type="password" className="w-full border p-2 rounded text-sm outline-none bg-white" />
                         <div className="top-8 right-0 absolute"><TokenValidator isValid={dockerValid} isValidating={dockerValidating} onValidate={validateDocker} /></div>
                     </div>
-                 </div>
-                 
-                 {/* IMAGE NAME & TAG */}
-                 <div className="pt-2 border-t border-blue-100">
-                     <div className="flex gap-3 items-end">
-                        <div className="flex-1">
+                  </div>
+                  
+                  <div className="pt-2 border-t border-blue-100">
+                      <div className="flex gap-3 items-end">
+                         <div className="flex-1">
                             <label className="mb-1 text-xs font-bold text-slate-700 flex items-center">
                                 Target Image Name
-                                <InfoTooltip text="The full repository path where the Docker image will be pushed (e.g. 'repo-name' or 'project/service'). Excludes registry URL and tag." />
+                                <InfoTooltip text="The full repository path. Excludes registry URL and tag." />
                             </label>
                             <input 
                                 value={imageName} 
@@ -463,8 +464,8 @@ function ScanFormContent({ buildMode }: Props) {
                                 placeholder="repo-service"
                                 className="w-full border p-2 rounded text-sm outline-none font-mono text-slate-700 bg-white"
                             />
-                        </div>
-                        <div className="w-28">
+                         </div>
+                         <div className="w-28">
                             <label className="block mb-1 text-xs font-bold text-slate-700 flex items-center gap-1"><Tag size={12}/> Tag</label>
                             <input 
                                 value={imageTag} 
@@ -472,15 +473,13 @@ function ScanFormContent({ buildMode }: Props) {
                                 placeholder="latest"
                                 className="w-full border p-2 rounded text-sm outline-none font-mono text-center bg-white focus:ring-2 focus:ring-yellow-400"
                             />
-                        </div>
-                     </div>
-                 </div>
-
+                         </div>
+                      </div>
+                  </div>
               </div>
             )}
         </div>
 
-        {/* Submit Button */}
         <div className="pt-2">
           <button disabled={loading} className="w-full bg-slate-900 text-white px-6 py-3.5 rounded-lg font-semibold hover:bg-slate-800 disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg shadow-slate-200 transition-all active:scale-[0.98]">
             {loading ? <Loader2 className="animate-spin" /> : (isContinuityMode ? "Save & Scan Next Service" : "Save Project & Start Scan")}
@@ -489,7 +488,6 @@ function ScanFormContent({ buildMode }: Props) {
       </form>
       </div>
       
-      {/* Editor Slide-over */}
       {isEditorOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40 transition-opacity" onClick={() => setIsEditorOpen(false)} />
       )}
@@ -544,7 +542,6 @@ function ScanFormContent({ buildMode }: Props) {
         </div>
       </div>
 
-      {/* Limit Modal */}
       {showLimitModal && (
          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">

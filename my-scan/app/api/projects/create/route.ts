@@ -1,87 +1,118 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { encrypt } from "@/lib/crypto";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
     const body = await req.json();
-    const { 
-      // User Info
-      email, 
-      
-      // Group Info (Repo)
-      groupName, 
-      repoUrl, 
+
+    const {
+      // User Info (Use session if available, fallback to body for testing)
+      email: bodyEmail,
+
+      // Group Info
+      groupName,
+      repoUrl,
       isPrivate,
       gitUser,
       gitToken,
-      
-      // Service Info (Image)
-      serviceName, 
-      contextPath, 
-      imageName, // ต้องรับชื่อ Image ปลายทางมาด้วย (เช่น index.docker.io/user/app)
+
+      // Service Info
+      serviceName,
+      contextPath,
+      imageName,
       dockerUser,
       dockerToken,
-      
-      // Logic Flags
-      isNewGroup, 
-      groupId 
+
+      // Flags
+      isNewGroup,
+      groupId
     } = body;
 
-    if (!email) {
+    const userEmail = session?.user?.email || bodyEmail;
+
+    if (!userEmail) {
        return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // 1. Check Quota (Limit 6 Images per User)
-    // นับจำนวน Service ทั้งหมดที่ User คนนี้เป็นเจ้าของผ่าน Group
+    // 1. Fetch User to get Default Credentials
+    const user = await prisma.user.findUnique({
+        where: { email: userEmail }
+    });
+
+    if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // 2. Logic: Priority = Payload > Default
+    // Note: user.default... is already encrypted in DB.
+    // body... is plain text, needs encryption.
+
+    const finalGitUser = gitUser || user.defaultGitUser;
+    const finalDockerUser = dockerUser || user.defaultDockerUser;
+
+    let finalGitToken = null;
+    if (gitToken) {
+        finalGitToken = encrypt(gitToken);
+    } else {
+        finalGitToken = user.defaultGitToken;
+    }
+
+    let finalDockerToken = null;
+    if (dockerToken) {
+        finalDockerToken = encrypt(dockerToken);
+    } else {
+        finalDockerToken = user.defaultDockerToken;
+    }
+
+    // 3. Check Quota
     const currentServicesCount = await prisma.projectService.count({
       where: {
-        group: { userEmail: email }
+        group: {
+            user: { email: userEmail }
+        }
       }
     });
 
     if (currentServicesCount >= 6) {
-      return NextResponse.json({ 
-        error: "Quota Exceeded", 
-        message: "You have reached the limit of 6 services. Please delete unused services." 
+      return NextResponse.json({
+        error: "Quota Exceeded",
+        message: "You have reached the limit of 6 services. Please delete unused services."
       }, { status: 403 });
     }
 
-    // 2. Prepare Target Group ID
+    // 4. Prepare Target Group ID
     let targetGroupId = groupId;
 
-    // กรณีสร้าง Group ใหม่ (Repo ใหม่)
     if (isNewGroup) {
-      // ตรวจสอบข้อมูลจำเป็นสำหรับ Group
       if (!groupName || !repoUrl) {
-        return NextResponse.json({ error: "Group Name and Repo URL are required for new group" }, { status: 400 });
+        return NextResponse.json({ error: "Group Name and Repo URL are required" }, { status: 400 });
       }
 
-      // สร้าง Group
+      // Create Group linked to User (NextAuth)
       const newGroup = await prisma.projectGroup.create({
         data: {
           groupName,
           repoUrl,
           isPrivate: !!isPrivate,
-          gitUser: gitUser || null,
-          gitToken: gitToken ? encrypt(gitToken) : null,
+          gitUser: finalGitUser,
+          gitToken: finalGitToken,
           user: {
-            connectOrCreate: {
-                where: { email },
-                create: { email }
-            }
+            connect: { email: userEmail }
           }
         }
       });
       targetGroupId = newGroup.id;
     }
 
-    // ตรวจสอบว่ามี targetGroupId แน่นอน
     if (!targetGroupId) {
         return NextResponse.json({ error: "Group ID is missing" }, { status: 400 });
     }
 
-    // 3. Create Service (Image Config)
+    // 5. Create Service
     if (!serviceName || !imageName) {
         return NextResponse.json({ error: "Service Name and Image Name are required" }, { status: 400 });
     }
@@ -90,11 +121,11 @@ export async function POST(req: Request) {
       data: {
         groupId: targetGroupId,
         serviceName,
-        contextPath: contextPath || ".", // ถ้าไม่ส่งมา ให้เป็น root (.)
-        imageName, // สำคัญ: ต้องระบุชื่อ Image ปลายทาง
-        
-        dockerUser: dockerUser || null,
-        dockerToken: dockerToken ? encrypt(dockerToken) : null,
+        contextPath: contextPath || ".",
+        imageName,
+
+        dockerUser: finalDockerUser,
+        dockerToken: finalDockerToken,
       }
     });
 

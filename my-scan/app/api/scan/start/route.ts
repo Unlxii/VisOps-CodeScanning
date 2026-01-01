@@ -1,121 +1,289 @@
-// /app/api/scan/start/route.ts
+// app/api/scan/start/route.ts
+/**
+ * Consolidated Scan Start API
+ * - Triggers GitLab CI/CD pipeline
+ * - Supports authenticated users with encrypted tokens
+ * - Quota enforcement (6 active projects max)
+ * - Prevents concurrent scans for same project
+ */
+
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/crypto";
+import { checkUserQuota } from "@/lib/quotaManager";
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = (session.user as any).id;
     const body = await req.json();
-    let { 
-      serviceId, 
-      imageTag, 
-      // Params เสริม (กรณี User กรอกใหม่)
-      repoUrl, dockerUser, dockerToken, contextPath, 
-      gitUser, gitToken, imageName
+    
+    const { 
+      serviceId,
+      scanMode = "SCAN_AND_BUILD", // Default mode
+      imageTag = "latest",
+      // For manual/test scans (optional)
+      repoUrl: manualRepoUrl,
+      contextPath: manualContextPath,
+      imageName: manualImageName,
+      projectName: manualProjectName,
     } = body;
 
-    let finalConfig: any = {};
-
-    // 1. กรณี User เลือก Service เดิม (Re-scan) หรือ Project ใหม่ที่มี URL เดิม
-    if (serviceId) {
-       const service = await prisma.projectService.findUnique({
-          where: { id: serviceId },
-          include: { group: true }
-       });
-
-       if (!service) {
-           return NextResponse.json({ error: "Service not found" }, { status: 404 });
-       }
-
-       // ✅ Decrypt Token จาก DB (ใช้ของเดิม ไม่ต้องกรอกใหม่)
-       const decryptedGitToken = service.group.gitToken ? decrypt(service.group.gitToken) : "";
-       const decryptedDockerToken = service.dockerToken ? decrypt(service.dockerToken) : "";
-
-       finalConfig = {
-           repoUrl: service.group.repoUrl,
-           projectName: service.group.groupName,
-           contextPath: service.contextPath,
-           imageName: service.imageName, 
-           gitUser: service.group.gitUser,
-           gitToken: decryptedGitToken,
-           dockerUser: service.dockerUser,
-           dockerToken: decryptedDockerToken
-       };
-    } else {
-        // กรณี Project ใหม่แบบกรอกเอง (ยังไม่ลง DB หรือเป็นการ Test)
-        finalConfig = {
-            repoUrl, dockerUser, dockerToken, contextPath, 
-            gitUser, gitToken, imageName, projectName: "manual-scan"
-        };
+    // Validate scan mode
+    if (!['SCAN_ONLY', 'SCAN_AND_BUILD'].includes(scanMode)) {
+      return NextResponse.json(
+        { error: "Invalid scan mode. Must be SCAN_ONLY or SCAN_AND_BUILD" },
+        { status: 400 }
+      );
     }
 
-    if (!finalConfig.repoUrl) return NextResponse.json({ error: "Missing Repo URL" }, { status: 400 });
-
-    // 2. Prepare Variables
-    const variables = [
-        { key: "USER_REPO_URL", value: finalConfig.repoUrl },
-        { key: "BUILD_CONTEXT", value: finalConfig.contextPath || "." },
-        { key: "USER_TAG", value: imageTag || "latest" },
-        
-        { key: "DOCKER_USER", value: finalConfig.dockerUser || "" },
-        { key: "DOCKER_PASSWORD", value: finalConfig.dockerToken || "" },
-        { key: "GIT_USERNAME", value: finalConfig.gitUser || "" },
-        { key: "GIT_TOKEN", value: finalConfig.gitToken || "" },
-        { key: "PROJECT_NAME", value: finalConfig.imageName || "scanned-project" },
-        { key: "BACKEND_HOST_URL", value: process.env.NEXT_PUBLIC_BASE_URL || "" }
-    ];
-      
-    if (!process.env.GITLAB_PROJECT_ID) {
-        throw new Error("Missing GITLAB_PROJECT_ID in .env");
-    }
-
-    // 3. Trigger GitLab Pipeline
-    const gitlabRes = await fetch(`${process.env.GITLAB_API_URL}/api/v4/projects/${process.env.GITLAB_PROJECT_ID}/pipeline`, {
-        method: "POST",
-        headers: { 
-            "Content-Type": "application/json",
-            "PRIVATE-TOKEN": process.env.GITLAB_TOKEN || ""
-        }, 
-        body: JSON.stringify({
-            ref: "main", 
-            variables: variables
-        })
+    // Get user with encrypted tokens
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        githubPAT: true,
+        githubUsername: true,
+        dockerToken: true,
+        dockerUsername: true,
+        isSetupComplete: true,
+      }
     });
+
+    if (!user || !user.isSetupComplete) {
+      return NextResponse.json(
+        { error: "Please complete setup first at /setup" },
+        { status: 400 }
+      );
+    }
+
+    if (!user.githubPAT || !user.dockerToken) {
+      return NextResponse.json(
+        { error: "Missing GitHub or Docker credentials" },
+        { status: 400 }
+      );
+    }
+
+    let finalConfig: any = {};
+    let projectId: string | undefined;
+    let projectGroupId: string | undefined;
+
+    // Case 1: Scanning existing service (from database)
+    if (serviceId) {
+      const service = await prisma.projectService.findUnique({
+        where: { id: serviceId },
+        include: { 
+          group: { 
+            include: { user: true } 
+          } 
+        }
+      });
+
+      if (!service) {
+        return NextResponse.json({ error: "Service not found" }, { status: 404 });
+      }
+
+      // Verify ownership
+      if (service.group.userId !== userId) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
+
+      // Check for active scans on this service (prevent concurrent scans)
+      const activeScan = await prisma.scanHistory.findFirst({
+        where: {
+          serviceId: serviceId,
+          status: { in: ['QUEUED', 'RUNNING'] }
+        }
+      });
+
+      if (activeScan) {
+        return NextResponse.json(
+          { 
+            error: "A scan is already in progress for this service",
+            activeScanId: activeScan.id 
+          },
+          { status: 429 }
+        );
+      }
+
+      projectId = service.id;
+      projectGroupId = service.groupId;
+
+      finalConfig = {
+        repoUrl: service.group.repoUrl,
+        contextPath: service.contextPath || ".",
+        imageName: service.imageName,
+        projectName: service.group.groupName,
+        customDockerfile: service.dockerfileContent, // Admin override if exists
+      };
+    } 
+    // Case 2: Manual scan (no serviceId)
+    else {
+      // Validate required fields for manual scan
+      if (!manualRepoUrl || !manualImageName) {
+        return NextResponse.json(
+          { error: "repoUrl and imageName are required for manual scans" },
+          { status: 400 }
+        );
+      }
+
+      // Check quota for new projects
+      const quotaCheck = await checkUserQuota(userId);
+      if (!quotaCheck.canCreate) {
+        return NextResponse.json(
+          { 
+            error: "Project quota exceeded",
+            message: quotaCheck.error,
+            currentCount: quotaCheck.currentCount,
+            maxCount: quotaCheck.maxAllowed 
+          },
+          { status: 429 }
+        );
+      }
+
+      finalConfig = {
+        repoUrl: manualRepoUrl,
+        contextPath: manualContextPath || ".",
+        imageName: manualImageName,
+        projectName: manualProjectName || "manual-scan",
+      };
+
+      // Auto-create project group and service for manual scans
+      // This tracks them in the database for history
+      const newGroup = await prisma.projectGroup.create({
+        data: {
+          userId,
+          groupName: finalConfig.projectName,
+          repoUrl: finalConfig.repoUrl,
+          isActive: true,
+        }
+      });
+
+      const newService = await prisma.projectService.create({
+        data: {
+          groupId: newGroup.id,
+          serviceName: finalConfig.imageName,
+          imageName: finalConfig.imageName,
+          contextPath: finalConfig.contextPath,
+        }
+      });
+
+      projectId = newService.id;
+      projectGroupId = newGroup.id;
+    }
+
+    // Decrypt user tokens
+    const githubToken = decrypt(user.githubPAT);
+    const dockerToken = decrypt(user.dockerToken);
+
+    // Prepare GitLab pipeline variables
+    const variables = [
+      { key: "USER_REPO_URL", value: finalConfig.repoUrl },
+      { key: "BUILD_CONTEXT", value: finalConfig.contextPath },
+      { key: "USER_TAG", value: imageTag },
+      { key: "PROJECT_NAME", value: finalConfig.imageName },
+      
+      // User credentials (decrypted)
+      { key: "GIT_USERNAME", value: user.githubUsername || "" },
+      { key: "GIT_TOKEN", value: githubToken },
+      { key: "DOCKER_USER", value: user.dockerUsername || "" },
+      { key: "DOCKER_PASSWORD", value: dockerToken },
+      
+      // Backend webhook URL
+      { key: "BACKEND_HOST_URL", value: process.env.NEXT_PUBLIC_BASE_URL || "" },
+      
+      // Scan mode
+      { key: "SCAN_MODE", value: scanMode },
+      
+      // Custom Dockerfile if provided by admin
+      { key: "CUSTOM_DOCKERFILE", value: finalConfig.customDockerfile || "" },
+    ];
+
+    // Validate GitLab configuration
+    if (!process.env.GITLAB_PROJECT_ID || !process.env.GITLAB_TOKEN || !process.env.GITLAB_API_URL) {
+      throw new Error("GitLab configuration incomplete. Check environment variables.");
+    }
+
+    // Trigger GitLab pipeline
+    const gitlabRes = await fetch(
+      `${process.env.GITLAB_API_URL}/api/v4/projects/${process.env.GITLAB_PROJECT_ID}/pipeline`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "PRIVATE-TOKEN": process.env.GITLAB_TOKEN,
+        },
+        body: JSON.stringify({
+          ref: "main",
+          variables: variables,
+        }),
+      }
+    );
 
     const pipelineData = await gitlabRes.json();
 
     if (!gitlabRes.ok) {
-        console.error("GitLab Trigger Failed:", pipelineData);
-        // ✅ เช็ค Error กรณี Token ผิด หรือ Permission ไม่ผ่าน
-        if (gitlabRes.status === 401 || gitlabRes.status === 403) {
-             return NextResponse.json({ error: "GitLab Unauthorized: System Token Invalid" }, { status: 401 });
-        }
-        // กรณี Pipeline สร้างไม่ได้ (เช่น Variable ผิด)
-        return NextResponse.json({ 
-            error: "Failed to start scan. Please check your inputs.", 
-            details: pipelineData.message 
-        }, { status: 400 });
+      console.error("GitLab Pipeline Trigger Failed:", pipelineData);
+      
+      if (gitlabRes.status === 401 || gitlabRes.status === 403) {
+        return NextResponse.json(
+          { error: "GitLab authentication failed. Contact administrator." },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          error: "Failed to start scan",
+          details: pipelineData.message || "Unknown error",
+        },
+        { status: 400 }
+      );
     }
 
-    // 4. บันทึก History
-    const newScan = await prisma.scanHistory.create({
-        data: {
-            serviceId: serviceId || undefined, 
-            scanId: process.env.GITLAB_PROJECT_ID, 
-            pipelineId: pipelineData.id.toString(), 
-            status: "PENDING",
-            imageTag: imageTag || "latest",
-        }
+    // Create scan history record
+    // Note: projectId is now guaranteed to exist (either from existing service or newly created)
+    const scanHistory = await prisma.scanHistory.create({
+      data: {
+        serviceId: projectId!, // Non-null assertion safe here
+        scanMode: scanMode,
+        scanId: `scan_${Date.now()}`,
+        pipelineId: pipelineData.id.toString(),
+        imageTag: imageTag,
+        status: "QUEUED",
+        startedAt: new Date(),
+        details: {
+          repoUrl: finalConfig.repoUrl,
+          contextPath: finalConfig.contextPath,
+          imageName: finalConfig.imageName,
+          projectName: finalConfig.projectName,
+        },
+      },
     });
 
-    return NextResponse.json({ 
-        success: true, 
-        scanId: newScan.scanId, 
-        pipelineId: newScan.pipelineId 
+    console.log(`[Scan] Pipeline ${pipelineData.id} started for user ${userId}`);
+
+    return NextResponse.json({
+      success: true,
+      scanId: scanHistory.id,
+      pipelineId: pipelineData.id,
+      webUrl: pipelineData.web_url,
+      status: "QUEUED",
+      message: "Scan started successfully. Pipeline is processing...",
     });
 
   } catch (error: any) {
-    console.error("Start Scan Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[Scan Start Error]:", error);
+    return NextResponse.json(
+      { error: error.message || "Internal server error" },
+      { status: 500 }
+    );
   }
 }

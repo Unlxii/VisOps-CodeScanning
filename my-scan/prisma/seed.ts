@@ -2,9 +2,11 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Starting seed...')
+  console.log('Starting seed...')
 
-  // 1. Node.js Template
+  // --- Templates ---
+  
+  // 1. Node.js
   await prisma.dockerTemplate.upsert({
     where: { stack: 'node' },
     update: {},
@@ -16,7 +18,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-# RUN npm run build (uncomment if needed)
+# RUN npm run build
 
 FROM node:18-alpine
 WORKDIR /app
@@ -31,7 +33,7 @@ CMD ["npm", "start"]
     }
   })
 
-  // 2. Python Template
+  // 2. Python
   await prisma.dockerTemplate.upsert({
     where: { stack: 'python' },
     update: {},
@@ -48,7 +50,7 @@ CMD ["python", "app.py"]
     }
   })
 
-  // 3. Java Template
+  // 3. Java
   await prisma.dockerTemplate.upsert({
     where: { stack: 'java' },
     update: {},

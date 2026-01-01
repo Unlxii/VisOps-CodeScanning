@@ -1,66 +1,139 @@
-// /app/api/scan/compare/route.ts
+// app/api/scan/compare/route.ts
+/**
+ * Scan Comparison API - Compare two scans
+ */
+
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const serviceId = searchParams.get("serviceId");
-
-  if (!serviceId) {
-    return NextResponse.json({ error: "Missing serviceId" }, { status: 400 });
-  }
-
+export async function POST(req: Request) {
   try {
-    // ดึงประวัติ 2 ครั้งล่าสุดของ Service นี้
-    const history = await prisma.scanHistory.findMany({
-      where: { serviceId: serviceId, status: { in: ['SUCCESS', 'BLOCKED'] } }, // เอาเฉพาะที่ Scan เสร็จแล้ว
-      orderBy: { createdAt: 'desc' },
-      take: 2,
-      select: {
-        id: true,
-        createdAt: true,
-        vulnCritical: true,
-        status: true,
-        details: true // ในนี้จะมี findings ที่เรา save ไว้จาก route status
-      }
-    });
-
-    if (history.length < 2) {
-      return NextResponse.json({ message: "Not enough history to compare" });
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const current = history[0];
-    const previous = history[1];
+    const userId = (session.user as any).id;
+    const body = await req.json();
+    const { scanId1, scanId2 } = body;
 
-    // Helper ดึง Findings จาก JSON
-    const getFindings = (details: any) => (details as any)?.findings || [];
+    if (!scanId1 || !scanId2) {
+      return NextResponse.json(
+        { error: "Missing scanId1 or scanId2" },
+        { status: 400 }
+      );
+    }
 
-    const currentFindings = getFindings(current.details);
-    const prevFindings = getFindings(previous.details);
+    // Fetch both scans
+    const scan1 = await prisma.scanHistory.findUnique({
+      where: { id: scanId1 },
+      include: {
+        service: {
+          include: {
+            group: true,
+          },
+        },
+      },
+    });
 
-    // หาอันใหม่ (New Issues)
-    const newIssues = currentFindings.filter((c: any) => 
-      !prevFindings.some((p: any) => p.id === c.id && p.pkgName === c.pkgName)
-    );
+    const scan2 = await prisma.scanHistory.findUnique({
+      where: { id: scanId2 },
+      include: {
+        service: {
+          include: {
+            group: true,
+          },
+        },
+      },
+    });
 
-    // หาอันที่แก้แล้ว (Fixed Issues)
-    const fixedIssues = prevFindings.filter((p: any) => 
-      !currentFindings.some((c: any) => c.id === p.id && c.pkgName === c.pkgName)
-    );
+    if (!scan1 || !scan2) {
+      return NextResponse.json({ error: "One or both scans not found" }, { status: 404 });
+    }
 
-    return NextResponse.json({
-      currentScan: { id: current.id, date: current.createdAt, critical: current.vulnCritical },
-      previousScan: { id: previous.id, date: previous.createdAt, critical: previous.vulnCritical },
-      diff: {
-        newIssuesCount: newIssues.length,
-        fixedIssuesCount: fixedIssues.length,
-        newIssues,   // รายการช่องโหว่ใหม่
-        fixedIssues  // รายการช่องโหว่ที่หายไป
+    // Verify ownership
+    if (
+      scan1.service.group.userId !== userId ||
+      scan2.service.group.userId !== userId
+    ) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // Extract findings from both scans
+    const findings1 = ((scan1.details as any)?.findings || []) as any[];
+    const findings2 = ((scan2.details as any)?.findings || []) as any[];
+
+    // Create unique keys for comparison
+    const createKey = (f: any) =>
+      `${f.file || ""}:${f.line || 0}:${f.ruleId || f.type || ""}`;
+
+    const map1 = new Map(findings1.map((f) => [createKey(f), f]));
+    const map2 = new Map(findings2.map((f) => [createKey(f), f]));
+
+    // Calculate differences
+    const newFindings: any[] = [];
+    const resolvedFindings: any[] = [];
+    const persistentFindings: any[] = [];
+
+    // New findings (in scan2 but not in scan1)
+    map2.forEach((finding, key) => {
+      if (!map1.has(key)) {
+        newFindings.push(finding);
+      } else {
+        persistentFindings.push(finding);
       }
     });
 
-  } catch (error) {
-    console.error("Compare Error:", error);
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+    // Resolved findings (in scan1 but not in scan2)
+    map1.forEach((finding, key) => {
+      if (!map2.has(key)) {
+        resolvedFindings.push(finding);
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      scan1: {
+        id: scan1.id,
+        imageTag: scan1.imageTag,
+        status: scan1.status,
+        startedAt: scan1.startedAt,
+        vulnCritical: scan1.vulnCritical,
+        vulnHigh: scan1.vulnHigh,
+        vulnMedium: scan1.vulnMedium,
+        vulnLow: scan1.vulnLow,
+      },
+      scan2: {
+        id: scan2.id,
+        imageTag: scan2.imageTag,
+        status: scan2.status,
+        startedAt: scan2.startedAt,
+        vulnCritical: scan2.vulnCritical,
+        vulnHigh: scan2.vulnHigh,
+        vulnMedium: scan2.vulnMedium,
+        vulnLow: scan2.vulnLow,
+      },
+      newFindings,
+      resolvedFindings,
+      persistentFindings,
+      summary: {
+        newCount: newFindings.length,
+        resolvedCount: resolvedFindings.length,
+        persistentCount: persistentFindings.length,
+        improvementPercentage:
+          findings1.length > 0
+            ? ((resolvedFindings.length / findings1.length) * 100).toFixed(1)
+            : "0",
+      },
+    });
+  } catch (error: any) {
+    console.error("[Compare Scans Error]:", error);
+    return NextResponse.json(
+      { error: error.message || "Internal server error" },
+      { status: 500 }
+    );
   }
 }

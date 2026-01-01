@@ -1,6 +1,7 @@
-// app/api/scan/history/route.ts
+// app/api/scan/status/active/route.ts
 /**
- * Scan History API - Get user's scan history
+ * Get active scans for real-time polling
+ * Extends session timeout if there are active scans
  */
 
 import { NextResponse } from "next/server";
@@ -17,26 +18,19 @@ export async function GET(req: Request) {
     }
 
     const userId = (session.user as any).id;
-    const { searchParams } = new URL(req.url);
-    const serviceId = searchParams.get("serviceId");
-    const limit = parseInt(searchParams.get("limit") || "50");
 
-    // Build query
-    const where: any = {
-      service: {
-        group: {
-          userId: userId,
+    // Get all active scans for user's projects
+    const activeScans = await prisma.scanHistory.findMany({
+      where: {
+        service: {
+          group: {
+            userId: userId,
+          }
         },
+        status: {
+          in: ['QUEUED', 'RUNNING']
+        }
       },
-    };
-
-    if (serviceId) {
-      where.serviceId = serviceId;
-    }
-
-    // Fetch scans
-    const scans = await prisma.scanHistory.findMany({
-      where,
       include: {
         service: {
           select: {
@@ -45,23 +39,26 @@ export async function GET(req: Request) {
             group: {
               select: {
                 groupName: true,
-              },
-            },
-          },
-        },
+              }
+            }
+          }
+        }
       },
-      orderBy: { startedAt: "desc" },
-      take: limit,
+      orderBy: {
+        startedAt: 'asc'
+      }
     });
 
+    // Response includes flag to extend session if there are active scans
     return NextResponse.json({
       success: true,
-      scans,
-      total: scans.length,
+      activeScans,
+      hasActiveScans: activeScans.length > 0,
+      extendSession: activeScans.length > 0, // Signal to frontend to keep session alive
     });
 
   } catch (error: any) {
-    console.error("[Scan History Error]:", error);
+    console.error("[Active Scans Error]:", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },
       { status: 500 }
