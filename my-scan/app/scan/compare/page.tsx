@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -10,6 +10,10 @@ import {
   TrendingUp,
   AlertTriangle,
   Loader2,
+  Shield,
+  Package,
+  RefreshCw,
+  Info,
 } from "lucide-react";
 
 interface Finding {
@@ -28,20 +32,97 @@ interface ComparisonResult {
   scan2: any;
 }
 
+interface Service {
+  id: string;
+  serviceName: string;
+  imageName: string;
+  scans: Array<{
+    id: string;
+    status: string;
+    startedAt: string;
+  }>;
+}
+
 export default function ComparePage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const projectId = searchParams.get("projectId");
+  const serviceId = searchParams.get("serviceId");
   const scan1Id = searchParams.get("scan1");
   const scan2Id = searchParams.get("scan2");
 
+  const [services, setServices] = useState<Service[]>([]);
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [firstScan, setFirstScan] = useState<any>(null);
+  const [canCompare, setCanCompare] = useState(true);
 
   useEffect(() => {
-    if (scan1Id && scan2Id) {
+    if (projectId) {
+      fetchProjectServices();
+    } else if (serviceId) {
+      fetchServiceComparison();
+    } else if (scan1Id && scan2Id) {
       fetchComparison();
+    } else {
+      setLoading(false);
+      setError("Missing required parameters");
     }
-  }, [scan1Id, scan2Id]);
+  }, [projectId, serviceId, scan1Id, scan2Id]);
+
+  useEffect(() => {
+    if (projectId) {
+      fetchProjectServices();
+    } else if (serviceId) {
+      fetchServiceComparison();
+    } else if (scan1Id && scan2Id) {
+      fetchComparison();
+    } else {
+      setLoading(false);
+      setError("Missing required parameters");
+    }
+  }, [projectId, serviceId, scan1Id, scan2Id]);
+
+  const fetchProjectServices = async () => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setServices(data.services || []);
+      } else {
+        setError("Failed to load project services");
+      }
+    } catch (error) {
+      console.error("Failed to fetch project:", error);
+      setError("Failed to load project");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchServiceComparison = async () => {
+    try {
+      const response = await fetch(`/api/scan/compare/${serviceId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.canCompare === false) {
+          setCanCompare(false);
+          setFirstScan(data.latest || null);
+        } else {
+          setComparison(data);
+        }
+      } else {
+        const error = await response.json();
+        setError(error.error || "Failed to load comparison");
+      }
+    } catch (error) {
+      console.error("Failed to fetch service comparison:", error);
+      setError("Failed to load comparison");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchComparison = async () => {
     try {
@@ -110,6 +191,113 @@ export default function ComparePage() {
               <div className="h-24 bg-gray-200 rounded"></div>
               <div className="h-24 bg-gray-200 rounded"></div>
               <div className="h-24 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show service selector for project comparison
+  if (projectId && !serviceId) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 text-sm font-medium transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">
+            Select Service to Compare
+          </h1>
+          {services.length === 0 ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+              <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">No services found in this project</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {services.map((service) => (
+                <Link
+                  key={service.id}
+                  href={`/scan/compare?serviceId=${service.id}`}
+                  className="bg-white rounded-lg border border-gray-200 p-5 hover:border-blue-400 hover:shadow-md transition"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {service.serviceName}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {service.imageName}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-2">
+                        {service.scans?.length || 0} scans available
+                      </p>
+                    </div>
+                    <ArrowLeft className="w-5 h-5 text-gray-400 rotate-180" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Show first scan message when only one scan exists
+  if (!canCompare && firstScan) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md mx-4">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+              <Info className="w-8 h-8 text-blue-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              First Scan Completed
+            </h2>
+            <p className="text-gray-600 mb-6">
+              This is your first scan. Run another scan to enable comparison and
+              track improvements over time.
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+              <div className="text-xs font-medium text-gray-500 mb-2">
+                CURRENT SCAN
+              </div>
+              <div className="text-sm font-medium text-gray-900">
+                {firstScan.imageTag}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {new Date(firstScan.startedAt).toLocaleString()}
+              </div>
+              <div className="flex gap-2 mt-3">
+                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">
+                  Critical: {firstScan.vulnCritical || 0}
+                </span>
+                <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded">
+                  High: {firstScan.vulnHigh || 0}
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Link
+                href="/dashboard"
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+              >
+                Back to Dashboard
+              </Link>
+              <Link
+                href="/scan/build"
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                New Scan
+              </Link>
             </div>
           </div>
         </div>

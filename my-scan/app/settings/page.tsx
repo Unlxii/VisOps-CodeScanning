@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { Save, Loader2, CheckCircle, Lock } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -20,7 +21,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
+      router.replace("/login"); // Use replace for auth redirects
       return;
     }
 

@@ -1,13 +1,22 @@
 // app/scan/history/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Loader2,
+  Trash2,
+  AlertCircle,
+} from "lucide-react";
 
 interface Scan {
   id: string;
+  pipelineId: string | null;
   status: string;
   scanMode: string;
   imageTag: string;
@@ -23,7 +32,19 @@ interface Scan {
   };
 }
 
-export default function ScanHistoryPage() {
+// Helper: Check if scan is deletable (failed status)
+const isDeletable = (status: string) => {
+  const deletableStatuses = [
+    "FAILED",
+    "FAILED_SECURITY",
+    "FAILED_BUILD",
+    "CANCELLED",
+    "ERROR",
+  ];
+  return deletableStatuses.includes(status);
+};
+
+function ScanHistoryContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const serviceId = searchParams.get("serviceId");
@@ -31,18 +52,25 @@ export default function ScanHistoryPage() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedScans, setSelectedScans] = useState<string[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
 
-  useEffect(() => {
-    fetchHistory();
-  }, [serviceId]);
-
-  const fetchHistory = async () => {
+  // Fetch history with useCallback for stability
+  const fetchHistory = useCallback(async () => {
     try {
       const url = serviceId
         ? `/api/scan/history?serviceId=${serviceId}`
         : "/api/scan/history";
 
       const response = await fetch(url);
+      if (response.status === 401) {
+        // Redirect to login if unauthorized
+        router.replace("/login");
+        return;
+      }
       if (response.ok) {
         const data = await response.json();
         setScans(data.scans || []);
@@ -52,7 +80,19 @@ export default function ScanHistoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [serviceId, router]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  // Toast auto-dismiss
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const handleSelectScan = (scanId: string) => {
     setSelectedScans((prev) => {
@@ -73,20 +113,78 @@ export default function ScanHistoryPage() {
     }
   };
 
+  const handleDelete = async (scanId: string) => {
+    if (!confirm("Are you sure you want to delete this scan record?")) return;
+
+    setDeletingId(scanId);
+    try {
+      const response = await fetch(`/api/scan/history?scanId=${scanId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setScans((prev) => prev.filter((s) => s.id !== scanId));
+        setSelectedScans((prev) => prev.filter((id) => id !== scanId));
+        setToast({ message: "Scan deleted successfully", type: "success" });
+      } else {
+        const error = await response.json();
+        setToast({
+          message: error.error || "Failed to delete scan",
+          type: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to delete scan:", error);
+      setToast({ message: "Failed to delete scan", type: "error" });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // Navigate to scan details with proper handling
+  const handleViewDetails = (scan: Scan) => {
+    if (scan.pipelineId) {
+      router.push(`/scan/${scan.pipelineId}`);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "SUCCESS":
+      case "PASSED":
         return "bg-green-100 text-green-800";
       case "FAILED_SECURITY":
         return "bg-red-100 text-red-800";
       case "FAILED":
+      case "FAILED_BUILD":
+      case "ERROR":
         return "bg-gray-100 text-gray-800";
       case "RUNNING":
         return "bg-blue-100 text-blue-800";
       case "QUEUED":
         return "bg-yellow-100 text-yellow-800";
+      case "CANCELLED":
+        return "bg-orange-100 text-orange-800";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "SUCCESS":
+      case "PASSED":
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case "FAILED":
+      case "FAILED_SECURITY":
+      case "FAILED_BUILD":
+      case "ERROR":
+        return <XCircle className="w-4 h-4 text-red-600" />;
+      case "RUNNING":
+      case "QUEUED":
+        return <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-600" />;
     }
   };
 
@@ -110,16 +208,36 @@ export default function ScanHistoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5 duration-300">
+          <div
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border ${
+              toast.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                : "bg-red-50 text-red-800 border-red-200"
+            }`}
+          >
+            {toast.type === "success" ? (
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-600" />
+            )}
+            <span className="font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <Link
-              href="/dashboard"
+            <button
+              onClick={() => router.back()}
               className="p-2 hover:bg-gray-100 rounded-lg transition"
             >
               <ArrowLeft className="w-5 h-5" />
-            </Link>
+            </button>
             <h1 className="text-2xl font-bold text-gray-900">Scan History</h1>
           </div>
           <p className="text-gray-500 text-sm ml-14">
@@ -213,13 +331,16 @@ export default function ScanHistoryPage() {
                       {scan.imageTag}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(
-                          scan.status
-                        )}`}
-                      >
-                        {scan.status}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        {getStatusIcon(scan.status)}
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(
+                            scan.status
+                          )}`}
+                        >
+                          {scan.status}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex gap-2">
@@ -249,12 +370,34 @@ export default function ScanHistoryPage() {
                       {new Date(scan.startedAt).toLocaleString("th-TH")}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Link
-                        href={`/scan/${scan.id}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        ดูรายละเอียด
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        {scan.pipelineId ? (
+                          <button
+                            onClick={() => handleViewDetails(scan)}
+                            className="text-blue-600 hover:underline hover:text-blue-800 transition"
+                          >
+                            ดูรายละเอียด
+                          </button>
+                        ) : (
+                          <span className="text-gray-400">ไม่มีข้อมูล</span>
+                        )}
+
+                        {/* Delete button - only for failed scans */}
+                        {isDeletable(scan.status) && (
+                          <button
+                            onClick={() => handleDelete(scan.id)}
+                            disabled={deletingId === scan.id}
+                            className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition disabled:opacity-50"
+                            title="Delete this scan record"
+                          >
+                            {deletingId === scan.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -264,5 +407,20 @@ export default function ScanHistoryPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// Main component with Suspense wrapper for useSearchParams
+export default function ScanHistoryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        </div>
+      }
+    >
+      <ScanHistoryContent />
+    </Suspense>
   );
 }
