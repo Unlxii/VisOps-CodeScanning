@@ -15,7 +15,6 @@ import {
   Sparkles,
 } from "lucide-react";
 
-// import ScanStatusAlert from "./ScanStatusAlert";
 import ConfirmBuildButton from "./ReleaseButton";
 
 // --- Types ---
@@ -318,9 +317,12 @@ export default function PipelineView({ scanId }: { scanId: string }) {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6 font-sans">
-      {/* <ScanStatusAlert scanId={scanId} /> */}
-
-      <ConfirmBuildButton scanId={scanId} />
+      {/* Release Button - Show when scan is successful and not blocked */}
+      {isSuccess && !isBlocked && (
+        <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+          <ConfirmBuildButton scanId={scanId} />
+        </div>
+      )}
 
       {/* Comparison Section - Show when data available */}
       {comparison?.canCompare && comparison.comparison && (

@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import PipelineView from "@/components/PipelineView";
-import ConfirmBuildButton from "@/components/ReleaseButton";
 import MonorepoAction from "@/components/MonorepoAction";
 // import ScanStatusAlert from "@/components/ScanStatusAlert";
 import Link from "next/link";
@@ -88,8 +87,8 @@ export default async function ScanPage(props: Props) {
           {/* 1. แสดงผลกราฟและตาราง Pipeline */}
           <PipelineView scanId={id} />
 
-          {/* 2. ส่วน Monorepo Action - แสดงเฉพาะเมื่อ scan เสร็จแล้ว */}
-          {repoUrl && groupId && isCompleted && (
+          {/* 2. ส่วน Monorepo Action - แสดงตลอดเวลา (สามารถเพิ่ม service ได้ทันที) */}
+          {repoUrl && groupId && (
             <div className="pt-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <MonorepoAction
                 repoUrl={repoUrl}
@@ -98,17 +97,6 @@ export default async function ScanPage(props: Props) {
               />
             </div>
           )}
-
-          {/* 3. ปุ่มกดยืนยัน Release - แสดงเฉพาะเมื่อ scan สำเร็จและไม่ถูก BLOCKED */}
-          {isCompleted &&
-            scanData?.status !== "BLOCKED" &&
-            scanData?.status !== "FAILED" &&
-            scanData?.status !== "FAILED_SECURITY" &&
-            scanData?.status !== "FAILED_BUILD" && (
-              <div className="border-t border-gray-200 pt-8">
-                <ConfirmBuildButton scanId={id} />
-              </div>
-            )}
         </div>
       </main>
     );

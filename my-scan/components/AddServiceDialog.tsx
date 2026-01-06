@@ -9,6 +9,28 @@ interface AddServiceDialogProps {
   repoUrl: string;
 }
 
+// Helper: Extract repo name from URL
+const extractRepoName = (url: string): string => {
+  const cleanUrl = url.replace(/\.git$/, "").replace(/\/$/, "");
+  const parts = cleanUrl.split(/[\/:]/);
+  return (
+    parts[parts.length - 1]?.toLowerCase().replace(/[^a-z0-9-]/g, "") || ""
+  );
+};
+
+// Helper: Generate Docker image name from repo + context
+const generateImageName = (repoUrl: string, contextPath: string): string => {
+  const repoName = extractRepoName(repoUrl);
+  if (contextPath && contextPath !== ".") {
+    const suffix = contextPath
+      .replace(/\//g, "-")
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "");
+    return `${repoName}-${suffix}`;
+  }
+  return repoName;
+};
+
 export default function AddServiceDialog({
   groupId,
   repoUrl,
@@ -21,6 +43,7 @@ export default function AddServiceDialog({
   // Form state
   const [serviceName, setServiceName] = useState("");
   const [contextPath, setContextPath] = useState(".");
+  const [imageName, setImageName] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +52,9 @@ export default function AddServiceDialog({
 
     try {
       // Step 1: Add service to project
+      const finalImageName =
+        imageName.trim() || generateImageName(repoUrl, contextPath.trim());
+
       const addServiceRes = await fetch("/api/projects/add-service", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -36,6 +62,7 @@ export default function AddServiceDialog({
           groupId,
           serviceName: serviceName.trim(),
           contextPath: contextPath.trim(),
+          imageName: finalImageName,
         }),
       });
 
@@ -78,7 +105,18 @@ export default function AddServiceDialog({
       setIsOpen(false);
       setServiceName("");
       setContextPath(".");
+      setImageName("");
       setError(null);
+    }
+  };
+
+  // Auto-generate image name when contextPath changes
+  const handleContextPathChange = (value: string) => {
+    setContextPath(value);
+    if (!imageName) {
+      // Auto-generate if user hasn't set custom name
+      const generated = generateImageName(repoUrl, value);
+      setImageName(generated);
     }
   };
 
@@ -167,13 +205,31 @@ export default function AddServiceDialog({
                 <input
                   type="text"
                   value={contextPath}
-                  onChange={(e) => setContextPath(e.target.value)}
+                  onChange={(e) => handleContextPathChange(e.target.value)}
                   placeholder="."
                   disabled={loading}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 font-mono text-sm"
                 />
                 <p className="text-xs text-gray-500 mt-1.5">
                   Path to the service folder (default: <code>.</code> for root)
+                </p>
+              </div>
+
+              {/* Docker Image Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Docker Image Name
+                </label>
+                <input
+                  type="text"
+                  value={imageName}
+                  onChange={(e) => setImageName(e.target.value)}
+                  placeholder="Auto-generated from repo and path"
+                  disabled={loading}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1.5">
+                  Docker Hub image name (leave empty for auto-generation)
                 </p>
               </div>
 
