@@ -159,3 +159,59 @@ export async function GET(
     );
   }
 }
+
+// PATCH update project details
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = (session.user as any).id;
+    const { id: projectId } = await params;
+    const body = await req.json();
+
+    // Find project and verify ownership
+    const project = await prisma.projectGroup.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    if (project.userId !== userId) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // Update project
+    const updatedProject = await prisma.projectGroup.update({
+      where: { id: projectId },
+      data: {
+        groupName: body.groupName || project.groupName,
+        repoUrl: body.repoUrl || project.repoUrl,
+      },
+    });
+
+    console.log(
+      `[Project Updated] User ${userId} updated project ${projectId}`
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: "Project updated successfully",
+      project: updatedProject,
+    });
+  } catch (error: any) {
+    console.error("[Update Project Error]:", error);
+    return NextResponse.json(
+      { error: error.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

@@ -27,7 +27,10 @@ import {
   Activity,
   Folder,
   Server,
+  Plus,
+  Edit2,
 } from "lucide-react";
+import AddServiceDialog from "@/components/AddServiceDialog";
 
 interface Project {
   id: string;
@@ -87,6 +90,11 @@ export default function DashboardPage() {
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error" | "info";
+  } | null>(null);
+  const [editingProject, setEditingProject] = useState<{
+    id: string;
+    groupName: string;
+    repoUrl: string;
   } | null>(null);
 
   useEffect(() => {
@@ -213,6 +221,33 @@ export default function DashboardPage() {
       showToast("Failed to start scan", "error");
     } finally {
       setScanningService(null);
+    }
+  };
+
+  const handleUpdateProject = async () => {
+    if (!editingProject) return;
+
+    try {
+      const response = await fetch(`/api/projects/${editingProject.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groupName: editingProject.groupName,
+          repoUrl: editingProject.repoUrl,
+        }),
+      });
+
+      if (response.ok) {
+        showToast("Project updated successfully", "success");
+        setEditingProject(null);
+        fetchDashboardData();
+      } else {
+        const error = await response.json();
+        showToast(`Error: ${error.error}`, "error");
+      }
+    } catch (error) {
+      console.error("Failed to update project:", error);
+      showToast("Failed to update project", "error");
     }
   };
 
@@ -473,6 +508,25 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Add New Project Card */}
+            <Link
+              href="/scan/build"
+              className="bg-white rounded-xl border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/30 overflow-hidden transition-all duration-200 flex items-center justify-center min-h-[300px] group cursor-pointer"
+            >
+              <div className="text-center p-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 group-hover:bg-blue-200 transition mb-4">
+                  <Plus className="w-8 h-8 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-700 group-hover:text-blue-600 transition">
+                  Create New Project
+                </h3>
+                <p className="text-sm text-slate-500 mt-2">
+                  Add a new repository to scan
+                </p>
+              </div>
+            </Link>
+
+            {/* Existing Project Cards */}
             {projects.map((project) => (
               <div
                 key={project.id}
@@ -609,15 +663,24 @@ export default function DashboardPage() {
 
                 {/* Project Footer Actions */}
                 <div className="border-t border-slate-200 px-4 py-3 bg-slate-50 flex items-center justify-between">
-                  <Link
-                    href={`/scan/build?repo=${encodeURIComponent(
-                      project.repoUrl
-                    )}`}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-                  >
-                    <Play className="w-3 h-3" /> Add Service
-                  </Link>
+                  <AddServiceDialog
+                    groupId={project.id}
+                    repoUrl={project.repoUrl}
+                  />
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        setEditingProject({
+                          id: project.id,
+                          groupName: project.groupName,
+                          repoUrl: project.repoUrl,
+                        })
+                      }
+                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"
+                      title="Edit Project"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
                     <Link
                       href={`/scan/compare?projectId=${project.id}`}
                       className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
@@ -643,6 +706,81 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Project Modal */}
+      {editingProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Edit2 className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Edit Project</h3>
+                  <p className="text-slate-300 text-xs mt-0.5">
+                    Update project details
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingProject(null)}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Project Name
+                </label>
+                <input
+                  type="text"
+                  value={editingProject.groupName}
+                  onChange={(e) =>
+                    setEditingProject({
+                      ...editingProject,
+                      groupName: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Repository URL
+                </label>
+                <input
+                  type="text"
+                  value={editingProject.repoUrl}
+                  onChange={(e) =>
+                    setEditingProject({
+                      ...editingProject,
+                      repoUrl: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                />
+              </div>
+            </div>
+            <div className="border-t px-6 py-3 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setEditingProject(null)}
+                className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateProject}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
