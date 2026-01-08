@@ -104,6 +104,8 @@ function ScanFormContent({ buildMode }: Props) {
     hasDocker: false,
     gitUser: "",
     dockerUser: "",
+    isDockerOrg: false,
+    dockerOrgName: "",
   });
   const [credentialsLoading, setCredentialsLoading] = useState(true);
 
@@ -145,6 +147,8 @@ function ScanFormContent({ buildMode }: Props) {
           hasDocker: d.hasDockerToken,
           gitUser: d.gitUser || "",
           dockerUser: d.dockerUser || "",
+          isDockerOrg: d.isDockerOrganization || false,
+          dockerOrgName: d.dockerOrgName || "",
         });
       })
       .catch(() => {})
@@ -568,7 +572,9 @@ function ScanFormContent({ buildMode }: Props) {
                     <Box size={14} />
                     index.docker.io/
                     <span className="font-bold">
-                      {credentials.dockerUser || "user"}
+                      {credentials.isDockerOrg && credentials.dockerOrgName
+                        ? credentials.dockerOrgName
+                        : credentials.dockerUser || "user"}
                     </span>
                     /
                     <span className="font-bold">

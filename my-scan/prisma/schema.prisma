@@ -58,6 +58,10 @@ model User {
   dockerToken     String?  @db.Text
   dockerUsername  String?
   
+  // Docker Hub Organization Support
+  isDockerOrganization Boolean @default(false)
+  dockerOrgName        String?
+  
   // Legacy fields (keep for backward compatibility)
   defaultGitUser     String?
   defaultGitToken    String?  // เก็บแบบ Encrypted

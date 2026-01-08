@@ -15,6 +15,10 @@ interface WebhookPayload {
   status: string;
   stage?: string;
   jobName?: string;
+  tool?: string; // "gitleaks" | "semgrep" | "trivy"
+  report?: any; // Full report JSON from security tools
+  secretsFound?: number; // Gitleaks
+  findingsCount?: number; // Semgrep
   vulnCritical?: number;
   vulnHigh?: number;
   vulnMedium?: number;
@@ -30,12 +34,60 @@ interface WebhookPayload {
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as WebhookPayload;
+    let body: WebhookPayload;
+    let reportFromFile: any = null;
+
+    // Check if request is FormData (with file) or JSON
+    const contentType = req.headers.get("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      // Handle FormData with file upload
+      const formData = await req.formData();
+      body = {
+        pipelineId: formData.get("pipelineId") as string,
+        status: formData.get("status") as string,
+        stage: formData.get("stage") as string | undefined,
+        jobName: formData.get("jobName") as string | undefined,
+        tool: formData.get("tool") as string | undefined,
+        secretsFound: formData.get("secretsFound")
+          ? Number(formData.get("secretsFound"))
+          : undefined,
+        findingsCount: formData.get("findingsCount")
+          ? Number(formData.get("findingsCount"))
+          : undefined,
+        vulnCritical: formData.get("vulnCritical")
+          ? Number(formData.get("vulnCritical"))
+          : undefined,
+        vulnHigh: formData.get("vulnHigh")
+          ? Number(formData.get("vulnHigh"))
+          : undefined,
+        vulnMedium: formData.get("vulnMedium")
+          ? Number(formData.get("vulnMedium"))
+          : undefined,
+        vulnLow: formData.get("vulnLow")
+          ? Number(formData.get("vulnLow"))
+          : undefined,
+      };
+
+      // Parse report file if provided
+      const reportFile = formData.get("reportFile") as File | null;
+      if (reportFile) {
+        const reportText = await reportFile.text();
+        try {
+          reportFromFile = JSON.parse(reportText);
+        } catch (err) {
+          console.error("[Webhook] Failed to parse report file:", err);
+        }
+      }
+    } else {
+      // Handle regular JSON
+      body = (await req.json()) as WebhookPayload;
+    }
 
     console.log(
       `[Webhook] Received: Pipeline ${body.pipelineId}, Status: ${
         body.status
-      }, Stage: ${body.stage || "N/A"}`
+      }, Stage: ${body.stage || "N/A"}, Tool: ${body.tool || "N/A"}`
     );
 
     const {
@@ -43,6 +95,10 @@ export async function POST(req: Request) {
       status,
       stage,
       jobName,
+      tool,
+      report,
+      secretsFound,
+      findingsCount,
       vulnCritical,
       vulnHigh,
       vulnMedium,
@@ -50,6 +106,9 @@ export async function POST(req: Request) {
       vulnerabilities,
       details,
     } = body;
+
+    // Use report from file if available, otherwise use report from body
+    const finalReport = reportFromFile || report;
 
     // Validate required fields
     if (!pipelineId || !status) {
@@ -80,9 +139,25 @@ export async function POST(req: Request) {
       logs: [],
       stages: {},
       vulnerabilities: [],
+      gitleaksReport: null,
+      semgrepReport: null,
+      trivyReport: null,
     };
     const newFindings = details?.findings || [];
     const newLogs = details?.logs || [];
+
+    // Store security tool reports
+    if (tool === "gitleaks" && finalReport) {
+      currentDetails.gitleaksReport = finalReport;
+      currentDetails.secretsFound = secretsFound || 0;
+      console.log(`[Webhook] Gitleaks: ${secretsFound} secrets found`);
+    } else if (tool === "semgrep" && finalReport) {
+      currentDetails.semgrepReport = finalReport;
+      currentDetails.codeIssuesFound = findingsCount || 0;
+      console.log(`[Webhook] Semgrep: ${findingsCount} code issues found`);
+    } else if (tool === "trivy" && finalReport) {
+      currentDetails.trivyReport = finalReport;
+    }
 
     // Store detailed vulnerabilities if provided (from BLOCKED release)
     if (vulnerabilities && Array.isArray(vulnerabilities)) {
@@ -164,6 +239,13 @@ export async function POST(req: Request) {
     }
 
     // Prepare update data
+    console.log("[Webhook] CurrentDetails before update:", {
+      hasGitleaksReport: !!currentDetails.gitleaksReport,
+      hasSemgrepReport: !!currentDetails.semgrepReport,
+      secretsFound: currentDetails.secretsFound,
+      codeIssuesFound: currentDetails.codeIssuesFound,
+    });
+
     const updateData: any = {
       status: finalStatus,
       updatedAt: new Date(),
@@ -179,6 +261,13 @@ export async function POST(req: Request) {
         errorMessage: details?.errorMessage || currentDetails.errorMessage,
       },
     };
+
+    console.log("[Webhook] UpdateData details:", {
+      hasGitleaksReport: !!updateData.details.gitleaksReport,
+      hasSemgrepReport: !!updateData.details.semgrepReport,
+      secretsFound: updateData.details.secretsFound,
+      codeIssuesFound: updateData.details.codeIssuesFound,
+    });
 
     // Set completion time if final status
     if (

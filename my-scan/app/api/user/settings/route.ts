@@ -19,6 +19,8 @@ export async function GET() {
       defaultGitToken: true,
       defaultDockerUser: true,
       defaultDockerToken: true,
+      isDockerOrganization: true,
+      dockerOrgName: true,
     },
   });
 
@@ -28,6 +30,8 @@ export async function GET() {
     // Only send flags for security - don't expose actual tokens
     hasGitToken: !!user?.defaultGitToken,
     hasDockerToken: !!user?.defaultDockerToken,
+    isDockerOrganization: user?.isDockerOrganization || false,
+    dockerOrgName: user?.dockerOrgName || "",
   });
 }
 
@@ -40,12 +44,19 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { gitUser, gitToken, dockerUser, dockerToken } = body;
+    const {
+      gitUser,
+      gitToken,
+      dockerUser,
+      dockerToken,
+      isDockerOrganization,
+      dockerOrgName,
+    } = body;
 
     // Build update data - implements UPSERT logic
     // Always update username fields if provided (even empty string to clear)
     // Only update token fields if a new value is provided (not empty)
-    const updateData: Record<string, string> = {};
+    const updateData: Record<string, string | boolean | null> = {};
 
     // Git credentials - upsert logic
     if (gitUser !== undefined) {
@@ -63,6 +74,14 @@ export async function POST(req: Request) {
     if (dockerToken && dockerToken.trim() !== "") {
       // Only update token if new value provided - this overwrites any existing token
       updateData.defaultDockerToken = encrypt(dockerToken.trim());
+    }
+
+    // Docker Organization settings
+    if (isDockerOrganization !== undefined) {
+      updateData.isDockerOrganization = isDockerOrganization;
+    }
+    if (dockerOrgName !== undefined) {
+      updateData.dockerOrgName = dockerOrgName || null;
     }
 
     // Verify user exists

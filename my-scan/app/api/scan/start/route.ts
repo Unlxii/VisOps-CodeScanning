@@ -54,6 +54,8 @@ export async function POST(req: Request) {
         githubUsername: true,
         dockerToken: true,
         dockerUsername: true,
+        isDockerOrganization: true,
+        dockerOrgName: true,
         isSetupComplete: true,
       },
     });
@@ -197,7 +199,14 @@ export async function POST(req: Request) {
       // User credentials (decrypted)
       { key: "GIT_USERNAME", value: user.githubUsername || "" },
       { key: "GIT_TOKEN", value: githubToken },
-      { key: "DOCKER_USER", value: user.dockerUsername || "" },
+      // Docker credentials - use Organization name if configured
+      {
+        key: "DOCKER_USER",
+        value:
+          user.isDockerOrganization && user.dockerOrgName
+            ? user.dockerOrgName
+            : user.dockerUsername || "",
+      },
       { key: "DOCKER_PASSWORD", value: dockerToken },
 
       // Backend webhook URL
