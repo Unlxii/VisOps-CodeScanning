@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Loader2, AlertCircle, XCircle } from "lucide-react";
+import { Loader2, AlertCircle, XCircle, GitCompare } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import ConfirmBuildButton from "./ReleaseButton";
 import { Run, ComparisonData } from "./pipeline/types";
@@ -22,11 +23,13 @@ export default function PipelineView({
   scanId: string;
   scanMode?: string;
 }) {
+  const router = useRouter();
   const [run, setRun] = useState<Run | null>(null);
   const [comparison, setComparison] = useState<ComparisonData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showCompareButton, setShowCompareButton] = useState(false);
 
   // Log scanMode for debugging
   console.log("🔍 PipelineView received scanMode:", scanMode);
@@ -99,6 +102,23 @@ export default function PipelineView({
     return () => clearInterval(interval);
   }, [scanId, run?.status]);
 
+  // Check for compare intent when scan completes
+  useEffect(() => {
+    if (
+      run?.status === "SUCCESS" ||
+      run?.status === "PASSED" ||
+      run?.status === "BLOCKED" ||
+      run?.status === "FAILED_SECURITY"
+    ) {
+      const compareIntent = sessionStorage.getItem(
+        `compare_after_scan_${scanId}`
+      );
+      if (compareIntent && run.serviceId) {
+        setShowCompareButton(true);
+      }
+    }
+  }, [run?.status, scanId, run?.serviceId]);
+
   const handleDownload = (reportName: string, data: any) => {
     if (!data) return alert("Report not available");
     const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -108,6 +128,14 @@ export default function PipelineView({
     link.href = URL.createObjectURL(blob);
     link.download = `${reportName}-report.json`;
     link.click();
+  };
+
+  const handleViewComparison = () => {
+    if (run?.serviceId) {
+      // Clear the intent
+      sessionStorage.removeItem(`compare_after_scan_${scanId}`);
+      router.push(`/scan/compare?serviceId=${run.serviceId}`);
+    }
   };
 
   const handleCancelScan = async () => {
@@ -240,6 +268,37 @@ export default function PipelineView({
               </>
             )}
           </button>
+        </div>
+      )}
+
+      {/* Compare Button - Show when scan completes and compare intent exists */}
+      {showCompareButton && (
+        <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-100 rounded-lg">
+                  <GitCompare className="w-6 h-6 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg">
+                    Scan Complete!
+                  </h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    View comparison with previous scan to see improvements and
+                    changes
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleViewComparison}
+                className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold flex items-center gap-2 transition shadow-md hover:shadow-lg"
+              >
+                <GitCompare className="w-5 h-5" />
+                View Comparison
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

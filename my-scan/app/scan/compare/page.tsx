@@ -25,11 +25,24 @@ interface Finding {
 }
 
 interface ComparisonResult {
-  newFindings: Finding[];
-  resolvedFindings: Finding[];
-  persistentFindings: Finding[];
-  scan1: any;
-  scan2: any;
+  newFindings?: Finding[];
+  resolvedFindings?: Finding[];
+  persistentFindings?: Finding[];
+  scan1?: any;
+  scan2?: any;
+  // For serviceId-based comparison
+  canCompare?: boolean;
+  serviceName?: string;
+  contextPath?: string;
+  groupName?: string;
+  repoUrl?: string;
+  comparison?: {
+    latest: any;
+    previous: any;
+    changes: any;
+    trend: string;
+    details: any;
+  };
 }
 
 interface Service {
@@ -89,7 +102,9 @@ export default function ComparePage() {
       const response = await fetch(`/api/projects/${projectId}`);
       if (response.ok) {
         const data = await response.json();
-        setServices(data.services || []);
+        // API returns { success: true, project: {...} }
+        const projectData = data.project || data;
+        setServices(projectData.services || []);
       } else {
         setError("Failed to load project services");
       }
@@ -352,17 +367,35 @@ export default function ComparePage() {
             </div>
             <div className="space-y-2">
               <div className="text-sm font-medium text-gray-900">
-                {comparison.scan1.imageTag}
+                {
+                  (comparison.comparison?.previous || comparison.scan1)
+                    ?.imageTag
+                }
               </div>
               <div className="text-xs text-gray-500">
-                {new Date(comparison.scan1.startedAt).toLocaleString()}
+                {new Date(
+                  (comparison.comparison?.previous || comparison.scan1)
+                    ?.scannedAt ||
+                    (comparison.comparison?.previous || comparison.scan1)
+                      ?.startedAt
+                ).toLocaleString()}
               </div>
               <div className="flex gap-2 mt-3">
                 <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">
-                  Critical: {comparison.scan1.vulnCritical}
+                  Critical:{" "}
+                  {(comparison.comparison?.previous || comparison.scan1)
+                    ?.vulnerabilities?.critical ||
+                    (comparison.comparison?.previous || comparison.scan1)
+                      ?.vulnCritical ||
+                    0}
                 </span>
                 <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded">
-                  High: {comparison.scan1.vulnHigh}
+                  High:{" "}
+                  {(comparison.comparison?.previous || comparison.scan1)
+                    ?.vulnerabilities?.high ||
+                    (comparison.comparison?.previous || comparison.scan1)
+                      ?.vulnHigh ||
+                    0}
                 </span>
               </div>
             </div>
@@ -373,17 +406,32 @@ export default function ComparePage() {
             </div>
             <div className="space-y-2">
               <div className="text-sm font-medium text-gray-900">
-                {comparison.scan2.imageTag}
+                {(comparison.comparison?.latest || comparison.scan2)?.imageTag}
               </div>
               <div className="text-xs text-gray-500">
-                {new Date(comparison.scan2.startedAt).toLocaleString()}
+                {new Date(
+                  (comparison.comparison?.latest || comparison.scan2)
+                    ?.scannedAt ||
+                    (comparison.comparison?.latest || comparison.scan2)
+                      ?.startedAt
+                ).toLocaleString()}
               </div>
               <div className="flex gap-2 mt-3">
                 <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">
-                  Critical: {comparison.scan2.vulnCritical}
+                  Critical:{" "}
+                  {(comparison.comparison?.latest || comparison.scan2)
+                    ?.vulnerabilities?.critical ||
+                    (comparison.comparison?.latest || comparison.scan2)
+                      ?.vulnCritical ||
+                    0}
                 </span>
                 <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded">
-                  High: {comparison.scan2.vulnHigh}
+                  High:{" "}
+                  {(comparison.comparison?.latest || comparison.scan2)
+                    ?.vulnerabilities?.high ||
+                    (comparison.comparison?.latest || comparison.scan2)
+                      ?.vulnHigh ||
+                    0}
                 </span>
               </div>
             </div>
@@ -396,7 +444,9 @@ export default function ComparePage() {
             <div className="flex items-center gap-3 mb-2">
               <TrendingUp className="w-5 h-5 text-red-600" />
               <div className="text-2xl font-bold text-red-600">
-                {comparison.newFindings.length}
+                {comparison.comparison?.details?.new ||
+                  comparison.newFindings?.length ||
+                  0}
               </div>
             </div>
             <div className="text-sm text-gray-600 font-medium">
@@ -407,7 +457,9 @@ export default function ComparePage() {
             <div className="flex items-center gap-3 mb-2">
               <TrendingDown className="w-5 h-5 text-green-600" />
               <div className="text-2xl font-bold text-green-600">
-                {comparison.resolvedFindings.length}
+                {comparison.comparison?.details?.resolved ||
+                  comparison.resolvedFindings?.length ||
+                  0}
               </div>
             </div>
             <div className="text-sm text-gray-600 font-medium">Resolved</div>
@@ -416,7 +468,9 @@ export default function ComparePage() {
             <div className="flex items-center gap-3 mb-2">
               <AlertTriangle className="w-5 h-5 text-gray-600" />
               <div className="text-2xl font-bold text-gray-600">
-                {comparison.persistentFindings.length}
+                {comparison.comparison?.details?.persisting ||
+                  comparison.persistentFindings?.length ||
+                  0}
               </div>
             </div>
             <div className="text-sm text-gray-600 font-medium">Persistent</div>
@@ -424,11 +478,16 @@ export default function ComparePage() {
         </div>
 
         {/* New Findings */}
-        {comparison.newFindings.length > 0 && (
+        {((comparison.comparison?.details?.newList?.length || 0) > 0 ||
+          (comparison.newFindings?.length || 0) > 0) && (
           <div className="mb-8">
             <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-red-600" />
-              New Findings ({comparison.newFindings.length})
+              New Findings (
+              {comparison.comparison?.details?.new ||
+                comparison.newFindings?.length ||
+                0}
+              )
             </h2>
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200">
@@ -452,7 +511,11 @@ export default function ComparePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {comparison.newFindings.map((finding, index) => (
+                  {(
+                    comparison.comparison?.details?.newList ||
+                    comparison.newFindings ||
+                    []
+                  ).map((finding: any, index: number) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -460,20 +523,33 @@ export default function ComparePage() {
                             finding.severity
                           )}`}
                         >
-                          {finding.severity}
+                          {finding.severity || finding.level || "N/A"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 font-mono">
-                        {finding.file}
+                      <td className="px-6 py-4 text-sm text-gray-900 font-mono break-all">
+                        {finding.file ||
+                          finding.location?.physicalLocation?.artifactLocation
+                            ?.uri ||
+                          finding.pkgName ||
+                          "N/A"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {finding.line}
+                        {finding.line ||
+                          finding.location?.physicalLocation?.region
+                            ?.startLine ||
+                          "-"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {finding.ruleId}
+                      <td className="px-6 py-4 text-sm text-gray-600 break-all">
+                        {finding.ruleId ||
+                          finding.rule?.id ||
+                          finding.title ||
+                          "N/A"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {finding.message}
+                      <td className="px-6 py-4 text-sm text-gray-600 break-all">
+                        {finding.message ||
+                          finding.message?.text ||
+                          finding.description ||
+                          "No description"}
                       </td>
                     </tr>
                   ))}
@@ -484,11 +560,16 @@ export default function ComparePage() {
         )}
 
         {/* Resolved Findings */}
-        {comparison.resolvedFindings.length > 0 && (
+        {((comparison.comparison?.details?.resolvedList?.length || 0) > 0 ||
+          (comparison.resolvedFindings?.length || 0) > 0) && (
           <div className="mb-8">
             <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <TrendingDown className="w-5 h-5 text-green-600" />
-              Resolved Findings ({comparison.resolvedFindings.length})
+              Resolved Findings (
+              {comparison.comparison?.details?.resolved ||
+                comparison.resolvedFindings?.length ||
+                0}
+              )
             </h2>
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200">
@@ -512,7 +593,11 @@ export default function ComparePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {comparison.resolvedFindings.map((finding, index) => (
+                  {(
+                    comparison.comparison?.details?.resolvedList ||
+                    comparison.resolvedFindings ||
+                    []
+                  ).map((finding: any, index: number) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -520,20 +605,33 @@ export default function ComparePage() {
                             finding.severity
                           )}`}
                         >
-                          {finding.severity}
+                          {finding.severity || finding.level || "N/A"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 font-mono">
-                        {finding.file}
+                      <td className="px-6 py-4 text-sm text-gray-900 font-mono break-all">
+                        {finding.file ||
+                          finding.location?.physicalLocation?.artifactLocation
+                            ?.uri ||
+                          finding.pkgName ||
+                          "N/A"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {finding.line}
+                        {finding.line ||
+                          finding.location?.physicalLocation?.region
+                            ?.startLine ||
+                          "-"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {finding.ruleId}
+                      <td className="px-6 py-4 text-sm text-gray-600 break-all">
+                        {finding.ruleId ||
+                          finding.rule?.id ||
+                          finding.title ||
+                          "N/A"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {finding.message}
+                      <td className="px-6 py-4 text-sm text-gray-600 break-all">
+                        {finding.message ||
+                          finding.message?.text ||
+                          finding.description ||
+                          "No description"}
                       </td>
                     </tr>
                   ))}
@@ -544,11 +642,16 @@ export default function ComparePage() {
         )}
 
         {/* Persistent Findings */}
-        {comparison.persistentFindings.length > 0 && (
+        {((comparison.comparison?.details?.persistingList?.length || 0) > 0 ||
+          (comparison.persistentFindings?.length || 0) > 0) && (
           <div className="mb-8">
             <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-gray-600" />
-              Persistent Findings ({comparison.persistentFindings.length})
+              Persistent Findings (
+              {comparison.comparison?.details?.persisting ||
+                comparison.persistentFindings?.length ||
+                0}
+              )
             </h2>
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="max-h-96 overflow-y-auto">
@@ -570,7 +673,11 @@ export default function ComparePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {comparison.persistentFindings.map((finding, index) => (
+                    {(
+                      comparison.comparison?.details?.persistingList ||
+                      comparison.persistentFindings ||
+                      []
+                    ).map((finding: any, index: number) => (
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
@@ -578,17 +685,27 @@ export default function ComparePage() {
                               finding.severity
                             )}`}
                           >
-                            {finding.severity}
+                            {finding.severity || finding.level || "N/A"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 font-mono">
-                          {finding.file}
+                        <td className="px-6 py-4 text-sm text-gray-900 font-mono break-all">
+                          {finding.file ||
+                            finding.location?.physicalLocation?.artifactLocation
+                              ?.uri ||
+                            finding.pkgName ||
+                            "N/A"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {finding.line}
+                          {finding.line ||
+                            finding.location?.physicalLocation?.region
+                              ?.startLine ||
+                            "-"}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {finding.ruleId}
+                        <td className="px-6 py-4 text-sm text-gray-600 break-all">
+                          {finding.ruleId ||
+                            finding.rule?.id ||
+                            finding.title ||
+                            "N/A"}
                         </td>
                       </tr>
                     ))}

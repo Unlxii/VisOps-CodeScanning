@@ -32,18 +32,6 @@ interface Scan {
   };
 }
 
-// Helper: Check if scan is deletable (failed status)
-const isDeletable = (status: string) => {
-  const deletableStatuses = [
-    "FAILED",
-    "FAILED_SECURITY",
-    "FAILED_BUILD",
-    "CANCELLED",
-    "ERROR",
-  ];
-  return deletableStatuses.includes(status);
-};
-
 function ScanHistoryContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -98,44 +86,43 @@ function ScanHistoryContent() {
     setSelectedScans((prev) => {
       if (prev.includes(scanId)) {
         return prev.filter((id) => id !== scanId);
-      } else if (prev.length < 2) {
+      } else {
         return [...prev, scanId];
       }
-      return prev;
     });
   };
 
-  const handleCompare = () => {
-    if (selectedScans.length === 2) {
-      router.push(
-        `/scan/compare?scan1=${selectedScans[0]}&scan2=${selectedScans[1]}`
-      );
-    }
-  };
+  const handleBulkDelete = async () => {
+    if (selectedScans.length === 0) return;
 
-  const handleDelete = async (scanId: string) => {
-    if (!confirm("Are you sure you want to delete this scan record?")) return;
+    if (
+      !confirm(
+        `Are you sure you want to delete ${selectedScans.length} scan record(s)?`
+      )
+    )
+      return;
 
-    setDeletingId(scanId);
+    setDeletingId("bulk");
     try {
-      const response = await fetch(`/api/scan/history?scanId=${scanId}`, {
-        method: "DELETE",
-      });
+      const deletePromises = selectedScans.map((scanId) =>
+        fetch(`/api/scan/history?scanId=${scanId}`, {
+          method: "DELETE",
+        })
+      );
 
-      if (response.ok) {
-        setScans((prev) => prev.filter((s) => s.id !== scanId));
-        setSelectedScans((prev) => prev.filter((id) => id !== scanId));
-        setToast({ message: "Scan deleted successfully", type: "success" });
-      } else {
-        const error = await response.json();
-        setToast({
-          message: error.error || "Failed to delete scan",
-          type: "error",
-        });
-      }
+      const results = await Promise.all(deletePromises);
+      const successCount = results.filter((r) => r.ok).length;
+
+      setScans((prev) => prev.filter((s) => !selectedScans.includes(s.id)));
+      setSelectedScans([]);
+
+      setToast({
+        message: `Successfully deleted ${successCount} scan(s)`,
+        type: "success",
+      });
     } catch (error) {
-      console.error("Failed to delete scan:", error);
-      setToast({ message: "Failed to delete scan", type: "error" });
+      console.error("Failed to delete scans:", error);
+      setToast({ message: "Failed to delete scans", type: "error" });
     } finally {
       setDeletingId(null);
     }
@@ -250,33 +237,36 @@ function ScanHistoryContent() {
           </div>
         </div>
 
-        {/* Compare Button */}
-        {selectedScans.length === 2 && (
-          <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 shadow-sm">
+        {/* Bulk Delete Button */}
+        {selectedScans.length > 0 && (
+          <div className="mb-6 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-5 shadow-sm">
             <div className="flex justify-between items-center">
               <div>
-                <span className="text-blue-900 font-semibold text-lg">
-                  2 scans selected for comparison
+                <span className="text-red-900 font-semibold text-lg">
+                  {selectedScans.length} scan(s) selected for deletion
                 </span>
-                <p className="text-blue-700 text-sm mt-1">
-                  Compare vulnerabilities and changes between selected scans
+                <p className="text-red-700 text-sm mt-1">
+                  Remove selected scans from history permanently
                 </p>
               </div>
               <button
-                onClick={handleCompare}
-                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold shadow-md hover:shadow-lg"
+                onClick={handleBulkDelete}
+                disabled={deletingId === "bulk"}
+                className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold shadow-md hover:shadow-lg disabled:opacity-50 flex items-center gap-2"
               >
-                Compare Scans
+                {deletingId === "bulk" ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete Selected
+                  </>
+                )}
               </button>
             </div>
-          </div>
-        )}
-
-        {selectedScans.length === 1 && (
-          <div className="mb-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
-            <p className="text-gray-600 text-sm">
-              Select one more scan to enable comparison
-            </p>
           </div>
         )}
 
@@ -309,7 +299,7 @@ function ScanHistoryContent() {
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Select
+                    Delete
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Service
@@ -356,17 +346,8 @@ function ScanHistoryContent() {
                           type="checkbox"
                           checked={selectedScans.includes(scan.id)}
                           onChange={() => handleSelectScan(scan.id)}
-                          disabled={
-                            !selectedScans.includes(scan.id) &&
-                            selectedScans.length >= 2
-                          }
-                          className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                          title={
-                            selectedScans.length >= 2 &&
-                            !selectedScans.includes(scan.id)
-                              ? "Maximum 2 scans can be selected"
-                              : "Select for comparison"
-                          }
+                          className="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
+                          title="Select for deletion"
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -460,39 +441,21 @@ function ScanHistoryContent() {
                         className="px-6 py-4 whitespace-nowrap text-sm"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="flex items-center gap-2">
-                          {scan.pipelineId ? (
-                            <button
-                              onClick={() => handleViewDetails(scan)}
-                              className="text-blue-600 hover:text-blue-800 hover:underline transition font-medium"
-                            >
-                              View Details
-                            </button>
-                          ) : (
-                            <span
-                              className="text-gray-400"
-                              title="Pipeline data not available"
-                            >
-                              No data
-                            </span>
-                          )}
-
-                          {/* Delete button - only for failed scans */}
-                          {isDeletable(scan.status) && (
-                            <button
-                              onClick={() => handleDelete(scan.id)}
-                              disabled={deletingId === scan.id}
-                              className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
-                              title="Delete this failed scan"
-                            >
-                              {deletingId === scan.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
-                            </button>
-                          )}
-                        </div>
+                        {scan.pipelineId ? (
+                          <button
+                            onClick={() => handleViewDetails(scan)}
+                            className="text-blue-600 hover:text-blue-800 hover:underline transition font-medium"
+                          >
+                            View Details
+                          </button>
+                        ) : (
+                          <span
+                            className="text-gray-400"
+                            title="Pipeline data not available"
+                          >
+                            No data
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );

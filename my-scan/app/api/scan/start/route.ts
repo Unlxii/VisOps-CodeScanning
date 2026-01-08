@@ -13,6 +13,11 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/crypto";
 import { checkUserQuota } from "@/lib/quotaManager";
+import {
+  MAX_SCANS_PER_SERVICE,
+  AUTO_CLEANUP_ENABLED,
+  MAX_SCAN_AGE_DAYS,
+} from "@/lib/scanConfig";
 
 export async function POST(req: Request) {
   try {
@@ -292,6 +297,55 @@ export async function POST(req: Request) {
         },
       },
     });
+
+    // 🗑️ Auto-cleanup: Keep only last N scans per service
+    if (AUTO_CLEANUP_ENABLED) {
+      const allScans = await prisma.scanHistory.findMany({
+        where: { serviceId: projectId! },
+        orderBy: { startedAt: "desc" },
+        select: { id: true, startedAt: true },
+      });
+
+      // Count-based cleanup: Keep only last N scans
+      if (allScans.length > MAX_SCANS_PER_SERVICE) {
+        const scansToDelete = allScans.slice(MAX_SCANS_PER_SERVICE);
+        const deleteIds = scansToDelete.map((s) => s.id);
+
+        await prisma.scanHistory.deleteMany({
+          where: { id: { in: deleteIds } },
+        });
+
+        console.log(
+          `[Scan Cleanup - Count] Deleted ${deleteIds.length} old scans for service ${projectId}. Keeping last ${MAX_SCANS_PER_SERVICE} scans.`
+        );
+      }
+
+      // Age-based cleanup: Delete scans older than MAX_SCAN_AGE_DAYS
+      if (MAX_SCAN_AGE_DAYS > 0) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - MAX_SCAN_AGE_DAYS);
+
+        const oldScans = await prisma.scanHistory.findMany({
+          where: {
+            serviceId: projectId!,
+            startedAt: { lt: cutoffDate },
+          },
+          select: { id: true },
+        });
+
+        if (oldScans.length > 0) {
+          const oldScanIds = oldScans.map((s) => s.id);
+
+          await prisma.scanHistory.deleteMany({
+            where: { id: { in: oldScanIds } },
+          });
+
+          console.log(
+            `[Scan Cleanup - Age] Deleted ${oldScans.length} scans older than ${MAX_SCAN_AGE_DAYS} days for service ${projectId}.`
+          );
+        }
+      }
+    }
 
     console.log(
       `[Scan] Pipeline ${pipelineData.id} started for user ${userId}`

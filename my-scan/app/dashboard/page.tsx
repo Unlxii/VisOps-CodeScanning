@@ -634,50 +634,52 @@ export default function DashboardPage() {
 
                           {/* Latest Scan Status */}
                           {service.scans.length > 0 && (
-                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span
-                                  className={`text-xs px-2 py-0.5 rounded-full border font-medium ${getStatusColor(
-                                    service.scans[0].status
-                                  )}`}
-                                >
-                                  {service.scans[0].status}
-                                </span>
-                                {service.scans[0].vulnCritical > 0 && (
-                                  <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">
-                                    {service.scans[0].vulnCritical} Critical
+                            <>
+                              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span
+                                    className={`text-xs px-2 py-0.5 rounded-full border font-medium ${getStatusColor(
+                                      service.scans[0].status
+                                    )}`}
+                                  >
+                                    {service.scans[0].status}
                                   </span>
-                                )}
-                                {service.scans[0].vulnHigh > 0 && (
-                                  <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-semibold">
-                                    {service.scans[0].vulnHigh} High
-                                  </span>
-                                )}
-                                {service.scans[0].vulnMedium > 0 && (
-                                  <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-medium">
-                                    {service.scans[0].vulnMedium} Medium
-                                  </span>
-                                )}
-                                {service.scans[0].vulnLow > 0 && (
-                                  <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                                    {service.scans[0].vulnLow} Low
+                                  {service.scans[0].vulnCritical > 0 && (
+                                    <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">
+                                      {service.scans[0].vulnCritical} Critical
+                                    </span>
+                                  )}
+                                  {service.scans[0].vulnHigh > 0 && (
+                                    <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-semibold">
+                                      {service.scans[0].vulnHigh} High
+                                    </span>
+                                  )}
+                                  {service.scans[0].vulnMedium > 0 && (
+                                    <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-medium">
+                                      {service.scans[0].vulnMedium} Medium
+                                    </span>
+                                  )}
+                                  {service.scans[0].vulnLow > 0 && (
+                                    <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                      {service.scans[0].vulnLow} Low
+                                    </span>
+                                  )}
+                                </div>
+                                {service.scans[0].pipelineId ? (
+                                  <Link
+                                    href={`/scan/${service.scans[0].pipelineId}`}
+                                    className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Eye className="w-3 h-3" /> View
+                                  </Link>
+                                ) : (
+                                  <span className="text-xs text-gray-400">
+                                    No details
                                   </span>
                                 )}
                               </div>
-                              {service.scans[0].pipelineId ? (
-                                <Link
-                                  href={`/scan/${service.scans[0].pipelineId}`}
-                                  className="text-xs text-blue-600 hover:underline flex items-center gap-1"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Eye className="w-3 h-3" /> View
-                                </Link>
-                              ) : (
-                                <span className="text-xs text-gray-400">
-                                  No details
-                                </span>
-                              )}
-                            </div>
+                            </>
                           )}
                         </div>
                       ))}

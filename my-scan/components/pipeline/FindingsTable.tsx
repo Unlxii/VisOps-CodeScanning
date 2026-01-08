@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useMemo, useEffect } from "react";
 import { Search, ShieldAlert, User, Mail } from "lucide-react";
 import { Severity, Vulnerability } from "./types";

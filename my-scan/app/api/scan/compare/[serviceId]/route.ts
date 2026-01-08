@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  { params }: { params: { serviceId: string } }
+  { params }: { params: Promise<{ serviceId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -23,14 +23,14 @@ export async function GET(
     }
 
     const userId = (session.user as any).id;
-    const { serviceId } = params;
+    const { serviceId } = await params;
 
     // Get service with ownership check
     const service = await prisma.projectService.findUnique({
       where: { id: serviceId },
       include: {
         group: {
-          select: { userId: true, groupName: true },
+          select: { userId: true, groupName: true, repoUrl: true },
         },
       },
     });
@@ -39,9 +39,12 @@ export async function GET(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Get latest 2 scan histories
+    // Get latest 2 successful scan histories for comparison
     const scans = await prisma.scanHistory.findMany({
-      where: { serviceId },
+      where: {
+        serviceId,
+        status: { in: ["SUCCESS", "PASSED", "FAILED_SECURITY", "BLOCKED"] },
+      },
       orderBy: { startedAt: "desc" },
       take: 2,
       select: {
@@ -56,6 +59,7 @@ export async function GET(
         vulnMedium: true,
         vulnLow: true,
         details: true,
+        reportJson: true,
       },
     });
 
@@ -77,23 +81,42 @@ export async function GET(
 
     const [latest, previous] = scans;
 
-    // Extract vulnerability details
-    const latestVulns = (latest.details as any)?.criticalVulnerabilities || [];
-    const previousVulns =
-      (previous.details as any)?.criticalVulnerabilities || [];
+    // Extract vulnerability details from both legacy and new format
+    const latestDetails = (latest.details as any) || {};
+    const previousDetails = (previous.details as any) || {};
 
-    // Create maps for comparison
-    const latestMap = new Map(latestVulns.map((v: any) => [v.id, v]));
-    const previousMap = new Map(previousVulns.map((v: any) => [v.id, v]));
+    // Try to get findings from reportJson (SARIF format) or fallback to details
+    const latestFindings = extractFindings(latest.reportJson, latestDetails);
+    const previousFindings = extractFindings(
+      previous.reportJson,
+      previousDetails
+    );
 
-    // Find fixed vulnerabilities (in previous but not in latest)
-    const fixed = previousVulns.filter((v: any) => !latestMap.has(v.id));
+    // Create maps for comparison using file path + rule as key
+    const createKey = (finding: any) =>
+      `${
+        finding.file ||
+        finding.location?.physicalLocation?.artifactLocation?.uri ||
+        ""
+      }:${finding.ruleId || finding.rule?.id || ""}`;
 
-    // Find new vulnerabilities (in latest but not in previous)
-    const newVulns = latestVulns.filter((v: any) => !previousMap.has(v.id));
+    const latestMap = new Map(latestFindings.map((f) => [createKey(f), f]));
+    const previousMap = new Map(previousFindings.map((f) => [createKey(f), f]));
 
-    // Find persisting vulnerabilities (in both)
-    const persisting = latestVulns.filter((v: any) => previousMap.has(v.id));
+    // Find new findings (in latest but not in previous)
+    const newFindings = latestFindings.filter(
+      (f) => !previousMap.has(createKey(f))
+    );
+
+    // Find resolved findings (in previous but not in latest)
+    const resolvedFindings = previousFindings.filter(
+      (f) => !latestMap.has(createKey(f))
+    );
+
+    // Find persisting findings (in both)
+    const persistingFindings = latestFindings.filter((f) =>
+      previousMap.has(createKey(f))
+    );
 
     // Calculate changes
     const changes = {
@@ -114,7 +137,9 @@ export async function GET(
     return NextResponse.json({
       canCompare: true,
       serviceName: service.serviceName,
+      contextPath: service.contextPath,
       groupName: service.group.groupName,
+      repoUrl: service.group.repoUrl,
       comparison: {
         latest: {
           id: latest.id,
@@ -155,12 +180,12 @@ export async function GET(
         changes,
         trend,
         details: {
-          fixed: fixed.length,
-          new: newVulns.length,
-          persisting: persisting.length,
-          fixedList: fixed.slice(0, 10), // Top 10
-          newList: newVulns.slice(0, 10), // Top 10
-          persistingList: persisting.slice(0, 10), // Top 10
+          new: newFindings.length,
+          resolved: resolvedFindings.length,
+          persisting: persistingFindings.length,
+          newList: newFindings.slice(0, 20),
+          resolvedList: resolvedFindings.slice(0, 20),
+          persistingList: persistingFindings.slice(0, 20),
         },
       },
     });
@@ -171,4 +196,43 @@ export async function GET(
       { status: 500 }
     );
   }
+}
+
+// Helper function to extract findings from reportJson or details
+function extractFindings(reportJson: any, details: any): any[] {
+  let findings: any[] = [];
+
+  // Try SARIF format first (reportJson)
+  if (reportJson && reportJson.runs) {
+    reportJson.runs.forEach((run: any) => {
+      if (run.results) {
+        findings = findings.concat(
+          run.results.map((result: any) => ({
+            file:
+              result.locations?.[0]?.physicalLocation?.artifactLocation?.uri ||
+              "",
+            line:
+              result.locations?.[0]?.physicalLocation?.region?.startLine || 0,
+            ruleId: result.ruleId || "",
+            severity: result.level || "warning",
+            message: result.message?.text || "",
+          }))
+        );
+      }
+    });
+  }
+
+  // Fallback to details object (legacy format)
+  if (findings.length === 0) {
+    if (details.findings && Array.isArray(details.findings)) {
+      findings = details.findings;
+    } else if (
+      details.criticalVulnerabilities &&
+      Array.isArray(details.criticalVulnerabilities)
+    ) {
+      findings = details.criticalVulnerabilities;
+    }
+  }
+
+  return findings;
 }
