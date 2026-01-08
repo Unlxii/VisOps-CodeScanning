@@ -185,15 +185,15 @@ export default function PipelineView({
   const isCancelled = run.status === "CANCELLED" || run.status === "CANCELED";
   const isCancellable = isQueued || isScanning;
   const isScanOnly = scanMode === "SCAN_ONLY"; // ตรวจสอบว่าเป็น SCAN_ONLY หรือไม่
-  
+
   console.log("🎯 PipelineView state:", {
     scanMode,
     isScanOnly,
     isSuccess,
     isBlocked,
-    shouldShowRelease: !isScanOnly && isSuccess && !isBlocked
+    shouldShowRelease: !isScanOnly && isSuccess && !isBlocked,
   });
-  
+
   const totalFindings =
     run.counts.critical + run.counts.high + run.counts.medium + run.counts.low;
 
