@@ -1,6 +1,7 @@
-// app/api/scan/history/route.ts
 /**
- * Scan History API - Get user's scan history and delete failed scans
+ * Scan History API
+ * - GET: Fetch history (Used by Dashboard & Compare Page)
+ * - DELETE: Clean up failed scans
  */
 
 import { NextResponse } from "next/server";
@@ -67,7 +68,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
-      scans,
+      history: scans,
       total: scans.length,
     });
   } catch (error: any) {
@@ -81,7 +82,6 @@ export async function GET(req: Request) {
 
 /**
  * DELETE - Delete a failed scan from history
- * Only allows deleting scans with FAILED status
  */
 export async function DELETE(req: Request) {
   try {
@@ -122,7 +122,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Scan not found" }, { status: 404 });
     }
 
-    // Only allow deleting failed scans (any type of failure)
+    // Only allow deleting failed scans
     const deletableStatuses = [
       "FAILED",
       "FAILED_SECURITY",
@@ -130,6 +130,7 @@ export async function DELETE(req: Request) {
       "CANCELLED",
       "ERROR",
     ];
+
     if (!deletableStatuses.includes(scan.status)) {
       return NextResponse.json(
         { error: "Only failed or cancelled scans can be deleted" },

@@ -2,7 +2,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -97,17 +97,22 @@ export default function DashboardPage() {
     repoUrl: string;
   } | null>(null);
 
+  // ✅ REF: เก็บรายการ Scan ที่วิ่งอยู่รอบที่แล้ว เพื่อเช็คว่าอันไหนหายไป (เสร็จแล้ว)
+  const prevActiveScanIds = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.replace("/login"); // Use replace for auth redirects (no back button to protected page)
+      router.replace("/login");
     } else if (status === "authenticated") {
+      // เรียกข้อมูลครั้งแรกทันที
       fetchDashboardData();
+      fetchActiveScans();
 
-      // Refresh active scans every 5 seconds
-      const activeScansInterval = setInterval(fetchActiveScans, 5000);
+      // ✅ REFRESH RATE: Active Scans ถี่ขึ้น (3s) เพื่อความ Realtime
+      const activeScansInterval = setInterval(fetchActiveScans, 3000);
 
-      // Refresh full dashboard data every 15 seconds
-      const dashboardInterval = setInterval(fetchDashboardData, 15000);
+      // ✅ REFRESH RATE: Dashboard ปกติ (10s)
+      const dashboardInterval = setInterval(fetchDashboardData, 10000);
 
       return () => {
         clearInterval(activeScansInterval);
@@ -118,11 +123,19 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch("/api/dashboard");
+      // ✅ Cache Control: ป้องกัน Browser Cache ข้อมูลเก่า
+      const response = await fetch("/api/dashboard", {
+        headers: { "Cache-Control": "no-store" },
+        cache: "no-store",
+      });
+
       if (response.ok) {
         const data = await response.json();
         setProjects(data.projects || []);
-        setActiveScans(data.activeScans || []);
+        // Update active scans จาก dashboard ด้วยเพื่อให้ข้อมูลตรงกันที่สุด
+        if (data.activeScans) {
+          setActiveScans(data.activeScans);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -133,12 +146,41 @@ export default function DashboardPage() {
 
   const fetchActiveScans = async () => {
     try {
-      const response = await fetch("/api/scan/status/active");
+      // ✅ Cache Control
+      const response = await fetch("/api/scan/status/active", {
+        headers: { "Cache-Control": "no-store" },
+        cache: "no-store",
+      });
+
       if (response.ok) {
         const data = await response.json();
-        setActiveScans(data.activeScans || []);
+        const currentScans: ActiveScan[] = data.activeScans || [];
+
+        setActiveScans(currentScans);
+
+        // ✅ LOGIC: ตรวจสอบการเปลี่ยนแปลงสถานะ
+        const currentIds = new Set(currentScans.map((s) => s.id));
+        const prevIds = prevActiveScanIds.current;
+
+        let hasFinishedScan = false;
+        // เช็คว่ามี ID ไหนที่เคยมีในรอบที่แล้ว แต่รอบนี้ไม่มี (แปลว่าเสร็จแล้ว/หายไป)
+        prevIds.forEach((id) => {
+          if (!currentIds.has(id)) {
+            hasFinishedScan = true;
+          }
+        });
+
+        // ✅ TRIGGER: ถ้ามี Scan เสร็จ ให้รีเฟรช Dashboard ใหญ่ทันที!
+        if (hasFinishedScan) {
+          console.log("Scan finished detected! Refreshing dashboard...");
+          fetchDashboardData();
+        }
+
+        // อัปเดต Reference สำหรับรอบถัดไป
+        prevActiveScanIds.current = currentIds;
+
         if (data.hasActiveScans) {
-          await fetch("/api/auth/session");
+          await fetch("/api/auth/session"); // Keep session alive
         }
       }
     } catch (error) {
@@ -157,7 +199,7 @@ export default function DashboardPage() {
   ) => {
     const confirmMsg = forceStop
       ? "This will stop all active scans and permanently delete the project. Continue?"
-      : "Are you sure you want to delete this project?\n\n⚠️ This will:\n• Remove the project from your dashboard\n• Keep scan history for reference (soft delete)\n\nTo permanently delete, contact administrator.";
+      : "Are you sure you want to delete this project?\n\n This will:\n• Remove the project from your dashboard\n• Keep scan history for reference (soft delete)\n\nTo permanently delete, contact administrator.";
 
     if (!confirm(confirmMsg)) return;
 
@@ -222,8 +264,13 @@ export default function DashboardPage() {
         );
         setShowRescanModal(null);
         setRescanTag("latest");
+
+        // Trigger fetch immediately so UI updates fast
+        fetchActiveScans();
+
         if (data.pipelineId) {
-          router.push(`/scan/${data.pipelineId}`);
+          // Optional: redirect or just stay on dashboard
+          // router.push(`/scan/${data.pipelineId}`);
         }
       } else {
         const error = await response.json();
