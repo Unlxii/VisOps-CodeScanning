@@ -108,11 +108,11 @@ export default function DashboardPage() {
       fetchDashboardData();
       fetchActiveScans();
 
-      // ✅ REFRESH RATE: Active Scans ถี่ขึ้น (3s) เพื่อความ Realtime
-      const activeScansInterval = setInterval(fetchActiveScans, 3000);
+      // ✅ REFRESH RATE: Active Scans ถี่ขึ้น (2s) เพื่อความ Realtime แบบเดียวกับหน้า scan
+      const activeScansInterval = setInterval(fetchActiveScans, 2000);
 
-      // ✅ REFRESH RATE: Dashboard ปกติ (10s)
-      const dashboardInterval = setInterval(fetchDashboardData, 10000);
+      // ✅ REFRESH RATE: Dashboard ปกติ (8s) - เร็วขึ้นเล็กน้อยเพื่อ sync ดีขึ้น
+      const dashboardInterval = setInterval(fetchDashboardData, 8000);
 
       return () => {
         clearInterval(activeScansInterval);
@@ -123,9 +123,12 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      // ✅ Cache Control: ป้องกัน Browser Cache ข้อมูลเก่า
-      const response = await fetch("/api/dashboard", {
-        headers: { "Cache-Control": "no-store" },
+      // ✅ Cache Control: ป้องกัน Browser Cache ข้อมูลเก่า + เพิ่ม timestamp เพื่อ force refresh
+      const response = await fetch(`/api/dashboard?_t=${Date.now()}`, {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+          Pragma: "no-cache",
+        },
         cache: "no-store",
       });
 
@@ -146,9 +149,12 @@ export default function DashboardPage() {
 
   const fetchActiveScans = async () => {
     try {
-      // ✅ Cache Control
-      const response = await fetch("/api/scan/status/active", {
-        headers: { "Cache-Control": "no-store" },
+      // ✅ Cache Control + timestamp เพื่อ realtime update
+      const response = await fetch(`/api/scan/status/active?_t=${Date.now()}`, {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+          Pragma: "no-cache",
+        },
         cache: "no-store",
       });
 
@@ -158,22 +164,33 @@ export default function DashboardPage() {
 
         setActiveScans(currentScans);
 
-        // ✅ LOGIC: ตรวจสอบการเปลี่ยนแปลงสถานะ
+        // ✅ LOGIC: ตรวจสอบการเปลี่ยนแปลงสถานะอย่างละเอียด
         const currentIds = new Set(currentScans.map((s) => s.id));
         const prevIds = prevActiveScanIds.current;
 
         let hasFinishedScan = false;
+        let hasNewScan = false;
+
         // เช็คว่ามี ID ไหนที่เคยมีในรอบที่แล้ว แต่รอบนี้ไม่มี (แปลว่าเสร็จแล้ว/หายไป)
         prevIds.forEach((id) => {
           if (!currentIds.has(id)) {
             hasFinishedScan = true;
+            console.log("🎯 Scan finished detected! ID:", id);
           }
         });
 
-        // ✅ TRIGGER: ถ้ามี Scan เสร็จ ให้รีเฟรช Dashboard ใหญ่ทันที!
-        if (hasFinishedScan) {
-          console.log("Scan finished detected! Refreshing dashboard...");
-          fetchDashboardData();
+        // เช็คว่ามี scan ใหม่เพิ่มเข้ามาหรือไม่
+        currentIds.forEach((id) => {
+          if (!prevIds.has(id)) {
+            hasNewScan = true;
+            console.log("🆕 New scan detected! ID:", id);
+          }
+        });
+
+        // ✅ TRIGGER: ถ้ามี Scan เสร็จหรือเริ่มใหม่ ให้รีเฟรช Dashboard ใหญ่ทันที!
+        if (hasFinishedScan || hasNewScan) {
+          console.log("🔄 Refreshing dashboard due to scan state change...");
+          await fetchDashboardData();
         }
 
         // อัปเดต Reference สำหรับรอบถัดไป

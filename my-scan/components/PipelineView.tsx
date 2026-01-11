@@ -49,7 +49,14 @@ export default function PipelineView({
   async function fetchStatus() {
     try {
       if (!scanId) return;
-      const res = await fetch(`/api/scan/status/${scanId}`);
+      // ✅ เพิ่ม cache busting เพื่อให้ได้ข้อมูล realtime ล่าสุดเสมอ
+      const res = await fetch(`/api/scan/status/${scanId}?_t=${Date.now()}`, {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+          Pragma: "no-cache",
+        },
+        cache: "no-store",
+      });
 
       if (res.status === 404) {
         const errorData = await res.json();
@@ -86,6 +93,7 @@ export default function PipelineView({
 
   useEffect(() => {
     fetchStatus();
+    // ✅ ลด polling interval เหลือ 2000ms (2s) เพื่อให้ realtime มากขึ้น และ sync กับ dashboard
     const interval = setInterval(() => {
       const status = run?.status?.toUpperCase();
       if (
@@ -98,7 +106,7 @@ export default function PipelineView({
       ) {
         fetchStatus();
       }
-    }, 3000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [scanId, run?.status]);
 
