@@ -1,3 +1,5 @@
+//my-scan\app\admin\template\page.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -9,6 +11,7 @@ const SUPPORTED_STACKS = [
   { id: "python", label: "Python" },
   { id: "java", label: "Java (Maven)" },
   { id: "go", label: "Go Lang" },
+  { id: "nginx", label: "Nginx / Static" },
 ];
 
 export default function AdminTemplatesPage() {
