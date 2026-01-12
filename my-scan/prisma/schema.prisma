@@ -59,7 +59,6 @@ model User {
   sessions             Session[]
   supportTickets       SupportTicket[]
   
-  // ✅ เก็บ field นี้ไว้ (จากการแก้ Conflict)
   status               String          @default("PENDING") 
 }
 
