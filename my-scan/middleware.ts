@@ -8,6 +8,10 @@ export default withAuth(
       token?.status === "PENDING" || token?.status === "REJECTED";
     const isApprovePage = req.nextUrl.pathname.startsWith("/pending");
     const isAdminPage = req.nextUrl.pathname.startsWith("/admin");
+    // ตรวจสอบว่า user ถูกปฏิเสธหรือรอการตรวจสอบ
+    const isBlocked =
+      token?.status === "PENDING" || token?.status === "REJECTED";
+    const isPendingPage = req.nextUrl.pathname.startsWith("/pending");
 
     // 1. ถ้าสถานะไม่ผ่าน (Pending/Rejected) และพยายามเข้าหน้าอื่นที่ไม่ใช่ /pending
     if (isPending && !isApprovePage) {
@@ -22,6 +26,16 @@ export default withAuth(
     // 3. ป้องกัน User ทั่วไปเข้าหน้า Admin
     if (isAdminPage && token?.role !== "admin") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+
+    // 4. ถ้าโดน Block และพยายามเข้าหน้าอื่น ให้เตะไปหน้า /pending
+    if (isBlocked && !isPendingPage) {
+      return NextResponse.redirect(new URL("/pending", req.url));
+    }
+
+    // 5. ถ้าสถานะผ่าน (APPROVED) แต่พยายามเข้าหน้า /pending ให้ส่งไป Dashboard
+    if (!isBlocked && isPendingPage) {
+      return NextResponse.json(new URL("/dashboard", req.url));
     }
 
     return NextResponse.next();
