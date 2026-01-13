@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useState, useRef, useEffect } from "react"; // เพิ่ม useEffect สำหรับ logic
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import useSWR, { mutate } from "swr"; // ✅ Import SWR
+import useSWR, { mutate } from "swr";
 import {
   Loader2,
   Trash2,
