@@ -1,7 +1,7 @@
 // app/admin/users/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import {
   UserCheck,
@@ -22,8 +22,11 @@ export default function ManageUsersPage() {
   const { data: session } = useSession(); // ดึงข้อมูล session
   const currentUserId = (session?.user as any)?.id; // เก็บ id ของ admin ที่กำลังใช้งานอยู่
 
-  const fetchUsers = async () => {
-    setLoading(true);
+  // useCallback ครอบ fetchUsers เพื่อให้เรียกใช้ซ้ำได้เสถียรขึ้น
+  const fetchUsers = useCallback(async (isAutoRefresh = false) => {
+    // ถ้าเป็นการ auto refresh ไม่ต้องเซต loading เป็น true เพื่อไม่ให้หน้าจอ flicker
+    if (!isAutoRefresh) setLoading(true);
+
     try {
       const res = await fetch("/api/admin/users");
       if (res.ok) {
@@ -33,13 +36,23 @@ export default function ManageUsersPage() {
     } catch (error) {
       console.error("Failed to fetch users:", error);
     } finally {
-      setLoading(false);
+      if (!isAutoRefresh) setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchUsers();
   }, []);
+
+  // Timer สำหรับ Auto Refresh
+  useEffect(() => {
+    // เรียกครั้งแรกตอนโหลดหน้า
+    fetchUsers();
+    // Refresh ทุกๆ 10 วินาที (10000 ms)
+    const interval = setInterval(() => {
+      fetchUsers(true); // ส่ง true เพื่อบอกว่าเป็น auto refresh
+      console.log("Auto-refreshed users data");
+    }, 10000);
+
+    // ล้าง Timer เมื่อออกจากหน้าจอ เพื่อกัน memory leak
+    return () => clearInterval(interval);
+  }, [fetchUsers]);
 
   const handleUpdateStatus = async (userId: string, newStatus: string) => {
     try {
