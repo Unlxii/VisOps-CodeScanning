@@ -37,7 +37,7 @@ export default function DocsSidebar() {
   return (
     <div className="w-full pt-1">
       <div className="mb-8 px-2 font-bold text-slate-900 tracking-tight">
-        VisOps Docs
+        VisScan Docs
       </div>
       {navConfig.map((group, index) => (
         <div key={index} className="mb-6">

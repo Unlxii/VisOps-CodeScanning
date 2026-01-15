@@ -29,7 +29,7 @@ export default function ArchitecturePage() {
             System Architecture
           </h1>
           <p className="text-base text-slate-600 mb-10 leading-7">
-            โครงสร้างการทำงานเบื้องหลังของระบบ VisOps Pipeline ตั้งแต่รับ Input
+            โครงสร้างการทำงานเบื้องหลังของระบบ VisScan Pipeline ตั้งแต่รับ Input
             จนถึงการออกรายงาน
           </p>
 

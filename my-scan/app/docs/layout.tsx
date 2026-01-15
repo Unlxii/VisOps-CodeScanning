@@ -19,7 +19,7 @@ export default function DocsLayout({
               href="/"
             >
               <span className="hidden font-bold sm:inline-block">
-                VisOps Docs
+                VisScan Docs
               </span>
             </a>
           </div>

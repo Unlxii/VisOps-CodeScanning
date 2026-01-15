@@ -25,7 +25,7 @@ export default function GettingStartedPage() {
             Getting Started
           </h1>
           <p className="text-base text-slate-600 mb-10 leading-7">
-            VisOps Secure Pipeline คือแพลตฟอร์ม DevSecOps แบบครบวงจร
+            VisScan Secure Pipeline คือแพลตฟอร์ม DevSecOps แบบครบวงจร
             ที่ช่วยให้คุณตรวจสอบความปลอดภัยของ Source Code และ Container Image
             ได้อย่างอัตโนมัติ
           </p>
@@ -63,7 +63,13 @@ export default function GettingStartedPage() {
               <h2 className="text-xl font-semibold text-slate-900 mb-4 pb-2 border-b border-slate-100">
                 Setup & Configuration
               </h2>
-              <ol className="list-decimal pl-5 space-y-4 text-slate-600 marker:text-slate-400">
+              <p className="text-sm text-slate-600 mb-6">
+                ในการใช้งานระบบจำเป็นต้องเชื่อมต่อบัญชี GitHub และ Docker Hub
+                เพื่อให้ระบบสามารถเข้าถึง Source Code และจัดการ Image ได้
+              </p>
+
+              <ol className="list-decimal pl-5 space-y-8 text-slate-600 marker:text-slate-400">
+                {/* Step 1 */}
                 <li>
                   <strong className="text-slate-900">Access Settings</strong>
                   <p className="text-sm mt-1">
@@ -74,23 +80,87 @@ export default function GettingStartedPage() {
                     >
                       Settings
                     </Link>{" "}
-                    ของโปรเจกต์
+                    ของโปรเจกต์เพื่อเริ่มตั้งค่า
                   </p>
                 </li>
-                <li>
-                  <strong className="text-slate-900">Connect GitHub</strong>
-                  <p className="text-sm mt-1">
-                    เพิ่ม Personal Access Token (PAT) ที่มีสิทธิ์{" "}
-                    <code>repo</code> scope
-                  </p>
-                </li>
+
+                {/* Step 2 */}
                 <li>
                   <strong className="text-slate-900">
-                    Configure Registry (Optional)
+                    Connect GitHub Account
                   </strong>
-                  <p className="text-sm mt-1">
-                    เพิ่มบัญชี Docker Hub หากต้องการใช้งานฟีเจอร์ Build Image
+                  <p className="text-sm mt-1 mb-3">
+                    กรอก <strong>GitHub Username</strong> และ{" "}
+                    <strong>Personal Access Token (PAT)</strong>
                   </p>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded p-4 text-sm">
+                    <p className="font-medium text-slate-900 mb-2">
+                      วิธีขอ GitHub Token:
+                    </p>
+                    <ol className="list-decimal pl-4 space-y-1 text-slate-600">
+                      <li>
+                        ไปที่ <strong>Settings</strong> {">"}{" "}
+                        <strong>Developer settings</strong> {">"}{" "}
+                        <strong>Personal access tokens (Tokens classic)</strong>
+                      </li>
+                      <li>
+                        กด <strong>Generate new token</strong> (Generate new
+                        token (classic))
+                      </li>
+                      <li>
+                        ในส่วน Select scopes ให้เลือก:
+                        <ul className="list-disc pl-5 mt-1 space-y-0.5 text-slate-500">
+                          <li>
+                            <code>repo</code> (Full control of private
+                            repositories)
+                          </li>
+                          <li>
+                            <code>write:packages</code> (Upload packages)
+                          </li>
+                          <li>
+                            <code>delete:packages</code> (Delete packages)
+                          </li>
+                        </ul>
+                      </li>
+                      <li>กด Generate token และคัดลอกมาใช้งาน</li>
+                    </ol>
+                  </div>
+                </li>
+
+                {/* Step 3 */}
+                <li>
+                  <strong className="text-slate-900">
+                    Configure Docker Registry (Optional)
+                  </strong>
+                  <p className="text-sm mt-1 mb-3">
+                    หากต้องการใช้งานโหมด Scan & Build ต้องกรอก{" "}
+                    <strong>Docker Hub Username</strong> และ{" "}
+                    <strong>Access Token</strong> (แนะนำให้ใช้ Token แทน
+                    Password)
+                  </p>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded p-4 text-sm">
+                    <p className="font-medium text-slate-900 mb-2">
+                      วิธีขอ Docker Hub Token:
+                    </p>
+                    <ol className="list-decimal pl-4 space-y-1 text-slate-600">
+                      <li>
+                        ล็อกอินเข้า Docker Hub ไปที่{" "}
+                        <strong>Account Settings</strong> {">"}{" "}
+                        <strong>Security</strong>
+                      </li>
+                      <li>
+                        กดปุ่ม <strong>New Access Token</strong>
+                      </li>
+                      <li>ตั้งชื่อ Token (เช่น VisScan-Token)</li>
+                      <li>
+                        กำหนด Access permissions เป็น{" "}
+                        <strong>Read, Write, Delete</strong>
+                      </li>
+                      <li>กด Generate และคัดลอก Token มาใช้งาน</li>
+                    </ol>
+                  </div>
                 </li>
               </ol>
             </section>
