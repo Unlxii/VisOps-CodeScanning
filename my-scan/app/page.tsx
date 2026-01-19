@@ -1,4 +1,3 @@
-// /app/page.tsx
 "use client";
 
 import { useSession } from "next-auth/react";
@@ -33,12 +32,12 @@ export default function Home() {
       <div className="w-full max-w-4xl">
         {/* Hero Section */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-6">
-            <Shield className="w-8 h-8 text-white" />
+          {/* ✅ เปลี่ยน Logo เป็น VS (ปรับขนาดเป็น w-16 h-16 เพื่อให้เหมาะกับ Landing Page) */}
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 text-white font-bold text-2xl shadow-lg mb-6">
+            VS
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            VisScan Scan
-          </h1>
+
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">VisScan</h1>
           <p className="text-gray-600 text-lg mb-8">
             Automated security scanning and vulnerability detection
           </p>
@@ -46,7 +45,7 @@ export default function Home() {
           {/* Login Button */}
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-sm hover:shadow-md"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -72,7 +71,7 @@ export default function Home() {
 
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
+          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
             <Shield className="w-6 h-6 text-blue-600 mb-3" />
             <h3 className="font-semibold mb-1 text-gray-900">
               Security Scanning
@@ -81,7 +80,7 @@ export default function Home() {
               Gitleaks, Semgrep, and Trivy integration
             </p>
           </div>
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
+          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
             <Container className="w-6 h-6 text-blue-600 mb-3" />
             <h3 className="font-semibold mb-1 text-gray-900">
               Container Scanning
@@ -90,7 +89,7 @@ export default function Home() {
               Docker image vulnerability detection
             </p>
           </div>
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
+          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
             <TrendingUp className="w-6 h-6 text-blue-600 mb-3" />
             <h3 className="font-semibold mb-1 text-gray-900">Scan History</h3>
             <p className="text-sm text-gray-600">
@@ -103,7 +102,7 @@ export default function Home() {
         <div className="text-center">
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm"
+            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
           >
             Get Started
             <ArrowRight className="w-4 h-4" />
