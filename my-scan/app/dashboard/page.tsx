@@ -24,6 +24,7 @@ import {
   MoreHorizontal,
   Play,
   Tag,
+  X,
 } from "lucide-react";
 import AddServiceDialog from "@/components/AddServiceDialog";
 import Tooltip from "@/components/ui/Tooltip";

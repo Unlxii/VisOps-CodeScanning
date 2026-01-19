@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { ArrowRight } from "lucide-react"; // ✅ ใช้ ArrowRight
 import Link from "next/link";
 
 export default function Home() {
@@ -25,7 +26,14 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans text-slate-900 selection:bg-blue-100">
       {/* 1. Minimal Nav */}
-      <nav className="w-full py-6 px-8 flex justify-end"></nav>
+      <nav className="w-full py-6 px-8 flex justify-end">
+        <Link
+          href="/login"
+          className="text-sm font-medium text-slate-500 hover:text-blue-700 transition-colors"
+        >
+          Sign in
+        </Link>
+      </nav>
 
       {/* 2. Center Content */}
       <main className="flex-1 flex flex-col items-center justify-center p-4 -mt-16">
@@ -37,20 +45,16 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Typography Section */}
+          {/* Typography */}
           <div className="space-y-4">
-            {/* ✅ หัวข้อ VisScan: ใช้ Gradient Text ไล่สีน้ำเงินเข้มไปฟ้า เพื่อให้ดูมีมิติ */}
             <h1 className="text-5xl font-extrabold tracking-tight sm:text-6xl bg-gradient-to-r from-blue-700 to-indigo-600 bg-clip-text text-transparent pb-2">
               VisScan
             </h1>
 
             <p className="text-lg font-medium leading-relaxed">
-              {/* ✅ ประโยคแรก: สีเทาเข้ม (Slate-700) เพื่อให้อ่านง่ายและตัดกับพื้นหลังขาว */}
               <span className="text-slate-700 block mb-1">
                 Security scanning for modern dev teams.
               </span>
-
-              {/* ✅ ประโยคเน้น: ใช้สีน้ำเงินสด (Blue-600) เพื่อดึงดูดสายตา */}
               <span className="text-blue-600 font-bold">
                 Code, Build, and Ship securely.
               </span>
@@ -59,19 +63,13 @@ export default function Home() {
 
           {/* Minimal Actions */}
           <div className="pt-4 flex flex-col items-center gap-4">
+            {/* ✅ ปุ่ม Get Started */}
             <Link
               href="/login"
               className="group relative w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-3 bg-slate-900 text-white font-medium rounded-xl hover:bg-blue-700 transition-all shadow-sm hover:shadow-xl hover:-translate-y-0.5 duration-300"
             >
-              {/* Google Icon */}
-              <svg
-                className="w-5 h-5 text-white"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
-              </svg>
-              <span>Continue with Google</span>
+              <span>Get Started</span>
+              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
         </div>
