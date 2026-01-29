@@ -9,12 +9,12 @@ export default function DocsLayout({
 }) {
   return (
     // ✅ 1. ใช้ w-full เพื่อให้ยืดเต็มพื้นที่ Content ของ AppLayout ไม่ต้องมี max-w หรือ mx-auto
-    <div className="w-full min-h-full bg-white">
+    <div className="w-full min-h-full bg-white dark:bg-slate-950">
       {/* Container หลัก จัดเรียงแบบ Flex ชิดซ้าย */}
       <div className="flex items-start w-full">
         {/* --- Left Sidebar (Docs Navigation) --- */}
         {/* ✅ Sidebar จะติดขอบซ้ายตลอดเวลา ไม่ลอยไปมา */}
-        <aside className="hidden lg:block sticky top-0 w-64 shrink-0 h-[calc(100vh-5rem)] overflow-y-auto border-r border-slate-200 py-8 pl-6 pr-4 bg-slate-50/30">
+        <aside className="hidden lg:block sticky top-0 w-64 shrink-0 h-[calc(100vh-5rem)] overflow-y-auto border-r border-slate-200 dark:border-slate-800 py-8 pl-6 pr-4 bg-slate-50/30 dark:bg-slate-900/30">
           <DocsSidebar />
         </aside>
 

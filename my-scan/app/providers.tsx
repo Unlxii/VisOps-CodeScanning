@@ -84,7 +84,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === "admin";
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 dark:bg-slate-950 overflow-hidden">
       {/* 1. Left Sidebar */}
       <Sidebar isAdmin={isAdmin} />
 
@@ -103,10 +103,21 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
+// ... existing imports
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <AppLayout>{children}</AppLayout>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <AppLayout>{children}</AppLayout>
+      </ThemeProvider>
     </SessionProvider>
   );
 }

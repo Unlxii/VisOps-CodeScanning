@@ -118,26 +118,27 @@ export default function ServicesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
-            toast.type === "success"
-              ? "bg-green-500 text-white"
-              : "bg-red-500 text-white"
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
+
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 p-6">
+        {/* Toast */}
+        {toast && (
+          <div
+            className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
+              toast.type === "success"
+                ? "bg-green-500 text-white"
+                : "bg-red-500 text-white"
+            }`}
+          >
+            {toast.message}
+          </div>
+        )}
 
       <div className="max-w-6xl mx-auto">
         {/* Header */}
@@ -145,12 +146,12 @@ export default function ServicesPage() {
           <div>
             <Link
               href="/dashboard"
-              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 mb-2 transition-colors"
+              className="inline-flex items-center text-sm text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 mb-2 transition-colors"
             >
               <ArrowLeft size={16} className="mr-1" /> Back to Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">My Services</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">My Services</h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
               Manage your scanned services
             </p>
           </div>
@@ -160,8 +161,8 @@ export default function ServicesPage() {
             <div
               className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${
                 isLimitReached
-                  ? "bg-red-50 border-red-200 text-red-700"
-                  : "bg-blue-50 border-blue-200 text-blue-700"
+                  ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400"
+                  : "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-400"
               }`}
             >
               <Package size={18} />
@@ -176,7 +177,7 @@ export default function ServicesPage() {
 
             <button
               onClick={fetchServices}
-              className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-600"
+              className="p-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition text-gray-600 dark:text-slate-400"
               title="Refresh List"
             >
               <RefreshCw size={20} />
@@ -185,7 +186,7 @@ export default function ServicesPage() {
             {isLimitReached ? (
               <button
                 disabled
-                className="flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-300 dark:bg-slate-800 text-gray-500 dark:text-slate-500 rounded-lg cursor-not-allowed font-medium"
                 title="Limit Reached. Delete a service to add a new one."
               >
                 <Plus size={16} /> Limit Reached
@@ -193,7 +194,7 @@ export default function ServicesPage() {
             ) : (
               <Link
                 href="/dashboard"
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-500 transition text-sm font-medium shadow-sm"
               >
                 <Plus size={16} /> New Scan
               </Link>
@@ -203,17 +204,17 @@ export default function ServicesPage() {
 
         {/* Services Grid */}
         {services.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center shadow-sm">
-            <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-12 text-center shadow-sm">
+            <Package className="w-12 h-12 text-gray-300 dark:text-slate-700 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               No services yet
             </h3>
-            <p className="text-gray-500 mb-4">
+            <p className="text-gray-500 dark:text-slate-400 mb-4">
               Start by scanning your first repository
             </p>
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-500 transition text-sm font-medium"
             >
               <Plus size={16} /> Start Scanning
             </Link>
@@ -232,18 +233,18 @@ export default function ServicesPage() {
               return (
                 <div
                   key={service.id}
-                  className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition flex flex-col h-full"
+                  className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-5 hover:shadow-md dark:hover:shadow-slate-900/50 transition flex flex-col h-full"
                 >
                   {/* Service Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0 pr-2">
                       <h3
-                        className="font-semibold text-gray-900 truncate"
+                        className="font-semibold text-gray-900 dark:text-white truncate"
                         title={service.serviceName}
                       >
                         {service.serviceName}
                       </h3>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">
+                      <p className="text-xs text-gray-500 dark:text-slate-400 truncate mt-0.5">
                         {service.imageName}
                       </p>
                     </div>
@@ -252,7 +253,7 @@ export default function ServicesPage() {
                         handleDelete(service.id, service.serviceName)
                       }
                       disabled={deletingId === service.id}
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition disabled:opacity-50"
+                      className="p-1.5 text-gray-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition disabled:opacity-50"
                       title="Delete service & release quota"
                     >
                       {deletingId === service.id ? (
@@ -265,7 +266,7 @@ export default function ServicesPage() {
 
                   {/* Stats */}
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
                       <Clock size={12} />
                       <span>{service._count.scans} scans</span>
                     </div>
@@ -273,12 +274,12 @@ export default function ServicesPage() {
                       <div
                         className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
                           latestScan.status === "SUCCESS"
-                            ? "bg-green-100 text-green-700"
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                             : ["FAILED", "FAILED_SECURITY", "BLOCKED"].includes(
                                 latestScan.status
                               )
-                            ? "bg-red-100 text-red-700"
-                            : "bg-blue-50 text-blue-700"
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                         }`}
                       >
                         <Shield size={10} />
@@ -291,42 +292,42 @@ export default function ServicesPage() {
                   <div className="flex-grow">
                     {latestScan && totalVulns > 0 ? (
                       <div className="grid grid-cols-4 gap-2 mb-4">
-                        <div className="text-center p-2 bg-red-50 rounded">
-                          <div className="text-lg font-bold text-red-600">
+                        <div className="text-center p-2 bg-red-50 dark:bg-red-950/30 rounded">
+                          <div className="text-lg font-bold text-red-600 dark:text-red-400">
                             {latestScan.vulnCritical}
                           </div>
-                          <div className="text-[10px] text-red-500">CRIT</div>
+                          <div className="text-[10px] text-red-500 dark:text-red-400/80">CRIT</div>
                         </div>
-                        <div className="text-center p-2 bg-orange-50 rounded">
-                          <div className="text-lg font-bold text-orange-600">
+                        <div className="text-center p-2 bg-orange-50 dark:bg-orange-950/30 rounded">
+                          <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
                             {latestScan.vulnHigh}
                           </div>
-                          <div className="text-[10px] text-orange-500">
+                          <div className="text-[10px] text-orange-500 dark:text-orange-400/80">
                             HIGH
                           </div>
                         </div>
-                        <div className="text-center p-2 bg-yellow-50 rounded">
-                          <div className="text-lg font-bold text-yellow-600">
+                        <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded">
+                          <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
                             {latestScan.vulnMedium}
                           </div>
-                          <div className="text-[10px] text-yellow-500">MED</div>
+                          <div className="text-[10px] text-yellow-500 dark:text-yellow-400/80">MED</div>
                         </div>
-                        <div className="text-center p-2 bg-blue-50 rounded">
-                          <div className="text-lg font-bold text-blue-600">
+                        <div className="text-center p-2 bg-blue-50 dark:bg-blue-950/30 rounded">
+                          <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
                             {latestScan.vulnLow}
                           </div>
-                          <div className="text-[10px] text-blue-500">LOW</div>
+                          <div className="text-[10px] text-blue-500 dark:text-blue-400/80">LOW</div>
                         </div>
                       </div>
                     ) : latestScan && totalVulns === 0 ? (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 text-center">
-                        <span className="text-green-700 text-sm font-medium">
+                      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30 rounded-lg p-3 mb-4 text-center">
+                        <span className="text-green-700 dark:text-green-400 text-sm font-medium">
                           ✅ Safe
                         </span>
                       </div>
                     ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 text-center">
-                        <span className="text-gray-500 text-sm">
+                      <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-800 rounded-lg p-3 mb-4 text-center">
+                        <span className="text-gray-500 dark:text-slate-500 text-sm">
                           Pending...
                         </span>
                       </div>
@@ -337,14 +338,14 @@ export default function ServicesPage() {
                   <div className="flex gap-2 mt-auto">
                     <Link
                       href={`/scan/history?serviceId=${service.id}`}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-800 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition"
                     >
                       <Clock size={14} /> History
                     </Link>
                     {latestScan && (
                       <Link
                         href={`/scan/${latestScan.pipelineId}`}
-                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition"
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition"
                       >
                         <ExternalLink size={14} /> Report
                       </Link>

@@ -16,7 +16,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans text-slate-900 selection:bg-blue-100">
+    <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col font-sans text-slate-900 dark:text-slate-100 selection:bg-blue-100 dark:selection:bg-blue-900">
       {/* Back Button */}
       <div className="absolute top-6 left-6">
         <Link
@@ -38,10 +38,10 @@ export default function LoginPage() {
 
           {/* Typography */}
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Welcome back
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Sign in to access your dashboard
             </p>
           </div>
@@ -51,10 +51,10 @@ export default function LoginPage() {
             <button
               onClick={handleGoogleLogin}
               disabled={isLoading || !isAgreed} // 🔒 ต้องติ๊กก่อน
-              className={`w-full group relative inline-flex items-center justify-center gap-3 px-8 py-3 bg-white text-slate-700 font-medium rounded-xl border border-slate-200 transition-all shadow-sm ${
+              className={`w-full group relative inline-flex items-center justify-center gap-3 px-8 py-3 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-medium rounded-xl border border-slate-200 dark:border-slate-700 transition-all shadow-sm ${
                 !isAgreed || isLoading
-                  ? "opacity-50 cursor-not-allowed bg-slate-50"
-                  : "hover:border-slate-300 hover:bg-slate-50 hover:shadow-md"
+                  ? "opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-800"
+                  : "hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-md"
               }`}
             >
               {isLoading ? (
@@ -90,19 +90,19 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={isAgreed}
                   onChange={(e) => setIsAgreed(e.target.checked)}
-                  className="w-4 h-4 border border-slate-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300 cursor-pointer accent-blue-600"
+                  className="w-4 h-4 border border-slate-300 dark:border-slate-600 rounded bg-gray-50 dark:bg-slate-800 focus:ring-3 focus:ring-blue-300 dark:focus:ring-blue-900 cursor-pointer accent-blue-600"
                 />
               </div>
               <label
                 htmlFor="terms"
-                className="text-xs text-slate-500 leading-tight select-none cursor-pointer"
+                className="text-xs text-slate-500 dark:text-slate-400 leading-tight select-none cursor-pointer"
               >
                 I acknowledge that I am solely responsible for the security of
                 my credentials (GitHub/Docker tokens) and I agree to the{" "}
                 <Link
                   href="/terms"
                   target="_blank"
-                  className="font-medium text-blue-600 hover:underline"
+                  className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   Terms of Service
                 </Link>{" "}
@@ -110,7 +110,7 @@ export default function LoginPage() {
                 <Link
                   href="/privacy"
                   target="_blank"
-                  className="font-medium text-blue-600 hover:underline"
+                  className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   Privacy Policy
                 </Link>

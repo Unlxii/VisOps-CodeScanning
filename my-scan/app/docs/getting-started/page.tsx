@@ -16,30 +16,30 @@ export default function GettingStartedPage() {
     <div className="px-6 lg:px-8">
       <div className="mx-auto max-w-7xl xl:grid xl:grid-cols-[1fr_250px] xl:gap-8">
         <div className="min-w-0">
-          <nav className="flex items-center text-sm text-slate-500 mb-6">
+          <nav className="flex items-center text-sm text-slate-500 dark:text-slate-400 mb-6">
             <span>Docs</span>
             <ChevronRight size={14} className="mx-2" />
-            <span className="font-medium text-slate-900">Getting Started</span>
+            <span className="font-medium text-slate-900 dark:text-white">Getting Started</span>
           </nav>
 
-          <h1 className="scroll-m-20 text-3xl font-bold tracking-tight text-slate-900 mb-6">
+          <h1 className="scroll-m-20 text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
             Getting Started
           </h1>
-          <p className="text-base text-slate-600 mb-10 leading-7">
+          <p className="text-base text-slate-600 dark:text-slate-400 mb-10 leading-7">
             VisScan Secure Pipeline คือแพลตฟอร์ม DevSecOps แบบครบวงจร
             ที่ช่วยให้คุณตรวจสอบความปลอดภัยของ Source Code และ Container Image
             ได้อย่างอัตโนมัติ
           </p>
 
-          <div className="prose prose-slate max-w-none">
+          <div className="prose prose-slate dark:prose-invert max-w-none">
             {/* Introduction */}
             <section id="introduction" className="mb-16 scroll-mt-24">
-              <h2 className="text-xl font-semibold text-slate-900 mb-4 pb-2 border-b border-slate-100">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
                 Introduction
               </h2>
-              <div className="space-y-6 text-slate-600">
+              <div className="space-y-6 text-slate-600 dark:text-slate-400">
                 <div>
-                  <h3 className="font-medium text-slate-900 mb-1">
+                  <h3 className="font-medium text-slate-900 dark:text-white mb-1">
                     Multi-Scanner Engine
                   </h3>
                   <p className="text-sm leading-6">
@@ -48,7 +48,7 @@ export default function GettingStartedPage() {
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-medium text-slate-900 mb-1">
+                  <h3 className="font-medium text-slate-900 dark:text-white mb-1">
                     Automated Build
                   </h3>
                   <p className="text-sm leading-6">
@@ -61,23 +61,23 @@ export default function GettingStartedPage() {
 
             {/* Setup */}
             <section id="setup" className="mb-16 scroll-mt-24">
-              <h2 className="text-xl font-semibold text-slate-900 mb-4 pb-2 border-b border-slate-100">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
                 Setup & Configuration
               </h2>
-              <p className="text-sm text-slate-600 mb-6">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
                 ในการใช้งานระบบจำเป็นต้องเชื่อมต่อบัญชี GitHub และ Docker Hub
                 เพื่อให้ระบบสามารถเข้าถึง Source Code และจัดการ Image ได้
               </p>
 
-              <ol className="list-decimal pl-5 space-y-8 text-slate-600 marker:text-slate-400">
+              <ol className="list-decimal pl-5 space-y-8 text-slate-600 dark:text-slate-400 marker:text-slate-400 dark:marker:text-slate-600">
                 {/* Step 1 */}
                 <li>
-                  <strong className="text-slate-900">Access Settings</strong>
+                  <strong className="text-slate-900 dark:text-white">Access Settings</strong>
                   <p className="text-sm mt-1">
                     ไปที่หน้า{" "}
                     <Link
                       href="/settings"
-                      className="text-blue-600 hover:underline"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       Settings
                     </Link>{" "}
@@ -87,7 +87,7 @@ export default function GettingStartedPage() {
 
                 {/* Step 2 */}
                 <li>
-                  <strong className="text-slate-900">
+                  <strong className="text-slate-900 dark:text-white">
                     Connect GitHub Account
                   </strong>
                   <p className="text-sm mt-1 mb-3">
@@ -95,11 +95,11 @@ export default function GettingStartedPage() {
                     <strong>Personal Access Token (PAT)</strong>
                   </p>
 
-                  <div className="bg-slate-50 border border-slate-200 rounded p-4 text-sm">
-                    <p className="font-medium text-slate-900 mb-2">
+                  <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 text-sm">
+                    <p className="font-medium text-slate-900 dark:text-white mb-2">
                       วิธีขอ GitHub Token:
                     </p>
-                    <ol className="list-decimal pl-4 space-y-1 text-slate-600">
+                    <ol className="list-decimal pl-4 space-y-1 text-slate-600 dark:text-slate-400">
                       <li>
                         ไปที่ <strong>Settings</strong> {">"}{" "}
                         <strong>Developer settings</strong> {">"}{" "}
@@ -111,7 +111,7 @@ export default function GettingStartedPage() {
                       </li>
                       <li>
                         ในส่วน Select scopes ให้เลือก:
-                        <ul className="list-disc pl-5 mt-1 space-y-0.5 text-slate-500">
+                        <ul className="list-disc pl-5 mt-1 space-y-0.5 text-slate-500 dark:text-slate-500">
                           <li>
                             <code>repo</code> (Full control of private
                             repositories)
@@ -131,7 +131,7 @@ export default function GettingStartedPage() {
 
                 {/* Step 3 */}
                 <li>
-                  <strong className="text-slate-900">
+                  <strong className="text-slate-900 dark:text-white">
                     Configure Docker Registry (Optional)
                   </strong>
                   <p className="text-sm mt-1 mb-3">
@@ -141,11 +141,11 @@ export default function GettingStartedPage() {
                     Password)
                   </p>
 
-                  <div className="bg-slate-50 border border-slate-200 rounded p-4 text-sm">
-                    <p className="font-medium text-slate-900 mb-2">
+                  <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 text-sm">
+                    <p className="font-medium text-slate-900 dark:text-white mb-2">
                       วิธีขอ Docker Hub Token:
                     </p>
-                    <ol className="list-decimal pl-4 space-y-1 text-slate-600">
+                    <ol className="list-decimal pl-4 space-y-1 text-slate-600 dark:text-slate-400">
                       <li>
                         ล็อกอินเข้า Docker Hub ไปที่{" "}
                         <strong>Account Settings</strong> {">"}{" "}
@@ -168,14 +168,14 @@ export default function GettingStartedPage() {
 
             {/* Quick Start */}
             <section id="quick-start" className="mb-16 scroll-mt-24">
-              <h2 className="text-xl font-semibold text-slate-900 mb-4 pb-2 border-b border-slate-100">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
                 Quick Start
               </h2>
-              <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
-                <h3 className="font-medium text-slate-900 mb-4">
+              <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800">
+                <h3 className="font-medium text-slate-900 dark:text-white mb-4">
                   Run your first scan
                 </h3>
-                <ol className="list-decimal pl-5 space-y-2 text-sm text-slate-700 marker:text-slate-400">
+                <ol className="list-decimal pl-5 space-y-2 text-sm text-slate-700 dark:text-slate-300 marker:text-slate-400 dark:marker:text-slate-600">
                   <li>
                     ไปที่หน้า <b>Dashboard</b> กดปุ่ม <b>New Scan</b>
                   </li>
@@ -192,7 +192,7 @@ export default function GettingStartedPage() {
                 <div className="mt-6">
                   <Link
                     href="/scan/scanonly"
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                    className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
                   >
                     Go to Scan Page &rarr;
                   </Link>

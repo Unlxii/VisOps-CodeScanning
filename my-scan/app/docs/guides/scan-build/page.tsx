@@ -15,64 +15,64 @@ export default function ScanBuildGuidePage() {
     <div className="px-6 lg:px-8">
       <div className="mx-auto max-w-7xl xl:grid xl:grid-cols-[1fr_250px] xl:gap-8">
         <div className="min-w-0">
-          <nav className="flex items-center text-sm text-slate-500 mb-6">
+          <nav className="flex items-center text-sm text-slate-500 dark:text-slate-400 mb-6">
             <Link
               href="/docs/getting-started"
-              className="hover:text-slate-900 transition-colors"
+              className="hover:text-slate-900 dark:hover:text-white transition-colors"
             >
               Docs
             </Link>
             <ChevronRight size={14} className="mx-2" />
-            <span className="font-medium text-slate-900">
+            <span className="font-medium text-slate-900 dark:text-white">
               Guide: Scan & Build
             </span>
           </nav>
 
-          <h1 className="scroll-m-20 text-3xl font-bold tracking-tight text-slate-900 mb-6">
+          <h1 className="scroll-m-20 text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
             Scan & Build Mode
           </h1>
-          <p className="text-base text-slate-600 mb-10 leading-7">
+          <p className="text-base text-slate-600 dark:text-slate-400 mb-10 leading-7">
             คู่มือการใช้งาน Pipeline เต็มรูปแบบ: สแกนโค้ด, สร้าง Docker Image,
             สแกน Image และ Push ขึ้น Registry
           </p>
 
           <section id="flow" className="mb-16 scroll-mt-24">
-            <h2 className="text-xl font-semibold text-slate-900 mb-6 pb-2 border-b border-slate-100">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-6 pb-2 border-b border-slate-100 dark:border-slate-800">
               Pipeline Flow
             </h2>
-            <ol className="list-decimal pl-5 space-y-2 text-sm text-slate-600 marker:text-slate-900">
+            <ol className="list-decimal pl-5 space-y-2 text-sm text-slate-600 dark:text-slate-400 marker:text-slate-900 dark:marker:text-white">
               <li>
-                <strong className="text-slate-900">Code Scan:</strong>{" "}
+                <strong className="text-slate-900 dark:text-white">Code Scan:</strong>{" "}
                 ตรวจสอบด้วย Gitleaks และ Semgrep
               </li>
               <li>
-                <strong className="text-slate-900">Docker Build:</strong> สร้าง
+                <strong className="text-slate-900 dark:text-white">Docker Build:</strong> สร้าง
                 Image จาก Dockerfile
               </li>
               <li>
-                <strong className="text-slate-900">Image Scan:</strong>{" "}
+                <strong className="text-slate-900 dark:text-white">Image Scan:</strong>{" "}
                 สแกนช่องโหว่ใน Image ด้วย Trivy
               </li>
               <li>
-                <strong className="text-slate-900">Push:</strong> อัปโหลด Image
+                <strong className="text-slate-900 dark:text-white">Push:</strong> อัปโหลด Image
                 ขึ้น Registry
               </li>
             </ol>
           </section>
 
           <section id="prereq" className="mb-16 scroll-mt-24">
-            <h2 className="text-xl font-semibold text-slate-900 mb-4 pb-2 border-b border-slate-100">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
               Prerequisites
             </h2>
-            <ul className="list-disc pl-5 space-y-4 text-sm text-slate-600 marker:text-slate-400">
+            <ul className="list-disc pl-5 space-y-4 text-sm text-slate-600 dark:text-slate-400 marker:text-slate-400 dark:marker:text-slate-500">
               <li>
-                <strong className="text-slate-900">Docker Registry:</strong>
+                <strong className="text-slate-900 dark:text-white">Docker Registry:</strong>
                 <span className="block mt-1">
                   ต้องตั้งค่าบัญชี Docker Hub ในหน้า Settings ให้เรียบร้อย
                 </span>
               </li>
               <li>
-                <strong className="text-slate-900">Dockerfile:</strong>
+                <strong className="text-slate-900 dark:text-white">Dockerfile:</strong>
                 <span className="block mt-1">
                   ต้องมีไฟล์ <code>Dockerfile</code> ใน Repository หรือใช้
                   Custom Dockerfile
@@ -82,26 +82,26 @@ export default function ScanBuildGuidePage() {
           </section>
 
           <section id="config" className="mb-16 scroll-mt-24">
-            <h2 className="text-xl font-semibold text-slate-900 mb-6 pb-2 border-b border-slate-100">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-6 pb-2 border-b border-slate-100 dark:border-slate-800">
               Configuration Options
             </h2>
             <div className="space-y-6">
               <div>
-                <h3 className="font-medium text-slate-900 mb-1">
+                <h3 className="font-medium text-slate-900 dark:text-white mb-1">
                   Default Mode
                 </h3>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   ใช้ Dockerfile ที่มีอยู่ใน Root Directory ของ Git Repo ตามปกติ
                 </p>
               </div>
               <div>
-                <h3 className="font-medium text-slate-900 mb-1">
+                <h3 className="font-medium text-slate-900 dark:text-white mb-1">
                   Custom Dockerfile
                 </h3>
-                <p className="text-sm text-slate-600 mb-2">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
                   เขียน Dockerfile ใหม่ผ่านหน้าเว็บได้ เหมาะสำหรับ:
                 </p>
-                <ul className="list-disc pl-5 text-sm text-slate-600 marker:text-slate-400">
+                <ul className="list-disc pl-5 text-sm text-slate-600 dark:text-slate-400 marker:text-slate-400 dark:marker:text-slate-500">
                   <li>Repo ที่ไม่มี Dockerfile</li>
                   <li>ต้องการเปลี่ยน Base Image ชั่วคราว</li>
                 </ul>
