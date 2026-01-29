@@ -100,7 +100,6 @@ async function handleMessage(msg: ConsumeMessage, ch: Channel) {
 
   console.log(`[Processing] Job ${job.id} (${job.type})`);
   
-  // ✅ Check if job is still valid (not cancelled while waiting in queue)
   const currentJob = await prisma.scanHistory.findUnique({ where: { id: job.scanHistoryId }, select: { status: true } });
   if (!currentJob || currentJob.status === "CANCELLED" || currentJob.status === "FAILED_TRIGGER") {
       console.warn(`[Worker] Job ${job.id} was ${currentJob?.status || "deleted"}. Skipping.`);
