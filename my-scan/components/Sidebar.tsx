@@ -66,18 +66,18 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
     <>
       <aside
         onClick={handleSidebarClick}
-        className={`bg-white border-r border-gray-200 hidden md:flex md:flex-col h-full shrink-0 transition-all duration-300 ease-in-out cursor-pointer relative hover:bg-gray-50/50 z-30 ${
+        className={`bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 hidden md:flex md:flex-col h-full shrink-0 transition-all duration-300 ease-in-out cursor-pointer relative hover:bg-gray-50/50 dark:hover:bg-slate-800/50 z-30 ${
           isCollapsed ? "w-20" : "w-64"
         }`}
       >
         {/* 1. Logo Area */}
-        <div className="h-20 flex items-center px-6 border-b border-gray-100 overflow-hidden whitespace-nowrap shrink-0">
+        <div className="h-20 flex items-center px-6 border-b border-gray-100 dark:border-slate-800 overflow-hidden whitespace-nowrap shrink-0">
           <div className="flex items-center gap-3 min-w-max">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
               VS
             </div>
             <span
-              className={`text-lg font-bold text-gray-900 tracking-tight transition-all duration-300 ${
+              className={`text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight transition-all duration-300 ${
                 isCollapsed
                   ? "opacity-0 w-0 translate-x-[-10px]"
                   : "opacity-100 w-auto translate-x-0"
@@ -94,7 +94,7 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
           {/* Main Menu */}
           <div className="space-y-1">
             <p
-              className={`px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 transition-all duration-300 ${
+              className={`px-3 text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-3 transition-all duration-300 ${
                 isCollapsed ? "text-center text-[10px]" : ""
               }`}
             >
@@ -109,8 +109,8 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
                 onMouseLeave={handleMouseLeave}
                 className={`relative flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 group ${
                   isActive(item.href)
-                    ? "bg-blue-50 text-blue-700 shadow-sm"
-                    : "text-gray-500 hover:bg-white hover:shadow-md hover:text-gray-900"
+                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 shadow-sm"
+                    : "text-gray-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md dark:hover:shadow-none hover:text-gray-900 dark:hover:text-gray-200"
                 }`}
               >
                 <item.icon

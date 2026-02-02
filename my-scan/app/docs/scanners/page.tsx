@@ -75,23 +75,23 @@ export default function ScannerDocsPage() {
     <div className="px-6 lg:px-8">
       <div className="mx-auto max-w-7xl xl:grid xl:grid-cols-[1fr_250px] xl:gap-8">
         <div className="min-w-0">
-          <nav className="flex items-center text-sm text-slate-500 mb-6">
+          <nav className="flex items-center text-sm text-slate-500 dark:text-slate-400 mb-6">
             <Link
               href="/docs/getting-started"
-              className="hover:text-slate-900 transition-colors"
+              className="hover:text-slate-900 dark:hover:text-white transition-colors"
             >
               Docs
             </Link>
             <ChevronRight size={14} className="mx-2" />
-            <span className="font-medium text-slate-900">
+            <span className="font-medium text-slate-900 dark:text-white">
               Supported Scanners
             </span>
           </nav>
 
-          <h1 className="scroll-m-20 text-3xl font-bold tracking-tight text-slate-900 mb-6">
+          <h1 className="scroll-m-20 text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
             Scanner Capabilities
           </h1>
-          <p className="text-base text-slate-600 mb-10 leading-7">
+          <p className="text-base text-slate-600 dark:text-slate-400 mb-10 leading-7">
             รายละเอียดเชิงเทคนิค ขอบเขตการทำงาน
             และข้อจำกัดของเครื่องมือสแกนความปลอดภัยที่ใช้ในระบบ Secure Pipeline
           </p>
@@ -99,7 +99,7 @@ export default function ScannerDocsPage() {
           <div className="space-y-16">
             {tools.map((tool) => (
               <section key={tool.id} id={tool.id} className="scroll-mt-24">
-                <div className="flex items-center gap-4 mb-4 pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-4 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
                   <div className="relative w-8 h-8 shrink-0">
                     <Image
                       src={tool.logo}
@@ -108,41 +108,41 @@ export default function ScannerDocsPage() {
                       className="object-contain"
                     />
                   </div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                     {tool.name}
                   </h2>
-                  <span className="text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-100 dark:border-slate-800">
                     {tool.version}
                   </span>
                   <a
                     href={tool.link}
                     target="_blank"
-                    className="ml-auto text-xs text-blue-600 hover:underline flex items-center gap-1"
+                    className="ml-auto text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                   >
                     Official Docs <ExternalLink size={10} />
                   </a>
                 </div>
 
-                <p className="text-sm text-slate-600 mb-6 leading-6">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-6">
                   {tool.description}
                 </p>
 
                 <div className="grid md:grid-cols-2 gap-8">
                   <div>
-                    <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-3">
+                    <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider mb-3">
                       Supported
                     </h3>
-                    <ul className="list-disc pl-4 space-y-1 text-sm text-slate-600 marker:text-slate-300">
+                    <ul className="list-disc pl-4 space-y-1 text-sm text-slate-600 dark:text-slate-400 marker:text-slate-300 dark:marker:text-slate-600">
                       {tool.scans.map((item, i) => (
                         <li key={i}>{item}</li>
                       ))}
                     </ul>
                   </div>
                   <div>
-                    <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-3">
+                    <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider mb-3">
                       Limitations
                     </h3>
-                    <ul className="list-disc pl-4 space-y-1 text-sm text-slate-600 marker:text-slate-300">
+                    <ul className="list-disc pl-4 space-y-1 text-sm text-slate-600 dark:text-slate-400 marker:text-slate-300 dark:marker:text-slate-600">
                       {tool.limitations.map((item, i) => (
                         <li key={i}>{item}</li>
                       ))}

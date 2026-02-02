@@ -8,20 +8,20 @@ interface QueuedStateProps {
 
 export const QueuedState = ({ onCancel, isCancelling }: QueuedStateProps) => {
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-8">
+    <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-8">
       <div className="flex flex-col items-center text-center">
-        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+          <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
         </div>
-        <h3 className="text-xl font-semibold text-blue-900 mb-2">
+        <h3 className="text-xl font-semibold text-orange-900 mb-2">
           Waiting in Queue
         </h3>
-        <p className="text-blue-700 mb-4 max-w-md">
-          Your scan is queued and will start processing soon. The worker will
-          pick it up automatically.
+        <p className="text-orange-800 mb-4 max-w-md">
+          Your scan is queued and will start processing soon. The worker will pick
+          it up automatically.
         </p>
-        <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-100 px-4 py-2 rounded-full">
-          <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+        <div className="flex items-center gap-2 text-sm text-orange-700 bg-orange-100 px-4 py-2 rounded-full">
+          <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
           Position in queue: Processing will begin shortly
         </div>
 

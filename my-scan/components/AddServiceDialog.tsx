@@ -13,27 +13,6 @@ interface AddServiceDialogProps {
   iconOnly?: boolean;
 }
 
-// Helper: Extract repo name from URL
-const extractRepoName = (url: string): string => {
-  const cleanUrl = url.replace(/\.git$/, "").replace(/\/$/, "");
-  const parts = cleanUrl.split(/[\/:]/);
-  return (
-    parts[parts.length - 1]?.toLowerCase().replace(/[^a-z0-9-]/g, "") || ""
-  );
-};
-
-// Helper: Generate Docker image name from repo + context
-const generateImageName = (repoUrl: string, contextPath: string): string => {
-  const repoName = extractRepoName(repoUrl);
-  if (contextPath && contextPath !== ".") {
-    const suffix = contextPath
-      .replace(/\//g, "-")
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, "");
-    return `${repoName}-${suffix}`;
-  }
-  return repoName;
-};
 
 export default function AddServiceDialog({
   groupId,
@@ -171,20 +150,20 @@ export default function AddServiceDialog({
         >
           {/* Modal Content */}
           <div
-            className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-200"
+            className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-200 border border-gray-200 dark:border-slate-800"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Package className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                     Add New Service
                   </h2>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                     Add a service to this monorepo project
                   </p>
                 </div>
@@ -192,7 +171,7 @@ export default function AddServiceDialog({
               <button
                 onClick={handleClose}
                 disabled={loading}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition disabled:opacity-50"
+                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition disabled:opacity-50"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -201,18 +180,18 @@ export default function AddServiceDialog({
             {/* Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {/* Repository Info */}
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="text-xs font-medium text-gray-500 mb-1">
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3 border border-gray-200 dark:border-slate-700">
+                <div className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">
                   REPOSITORY
                 </div>
-                <div className="text-sm text-gray-700 font-mono truncate">
+                <div className="text-sm text-gray-700 dark:text-gray-300 font-mono truncate">
                   {repoUrl}
                 </div>
               </div>
 
               {/* Service Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                   Service Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -222,16 +201,16 @@ export default function AddServiceDialog({
                   placeholder="e.g., frontend, api, auth-service"
                   required
                   disabled={loading}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50"
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 dark:disabled:bg-slate-800 text-gray-900 dark:text-white"
                 />
-                <p className="text-xs text-gray-500 mt-1.5">
+                <p className="text-xs text-gray-500 dark:text-slate-500 mt-1.5">
                   A unique name for this service within the project
                 </p>
               </div>
 
               {/* Context Path */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                   Build Directory / Context Path
                 </label>
                 <input
@@ -240,16 +219,16 @@ export default function AddServiceDialog({
                   onChange={(e) => handleContextPathChange(e.target.value)}
                   placeholder="."
                   disabled={loading}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 font-mono text-sm"
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 dark:disabled:bg-slate-800 font-mono text-sm text-gray-900 dark:text-white"
                 />
-                <p className="text-xs text-gray-500 mt-1.5">
+                <p className="text-xs text-gray-500 dark:text-slate-500 mt-1.5">
                   Path to the service folder (default: <code>.</code> for root)
                 </p>
               </div>
 
               {/* Docker Image Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                   Docker Image Name
                 </label>
                 <input
@@ -258,22 +237,22 @@ export default function AddServiceDialog({
                   onChange={(e) => setImageName(e.target.value)}
                   placeholder="Auto-generated from repo and path"
                   disabled={loading}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 font-mono text-sm"
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50 dark:disabled:bg-slate-800 font-mono text-sm text-gray-900 dark:text-white"
                 />
-                <p className="text-xs text-gray-500 mt-1.5">
+                <p className="text-xs text-gray-500 dark:text-slate-500 mt-1.5">
                   Docker Hub image name (leave empty for auto-generation)
                 </p>
               </div>
 
               {/* Error Message */}
               {error && (
-                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <div className="text-sm font-medium text-red-800">
+                    <div className="text-sm font-medium text-red-800 dark:text-red-300">
                       Error
                     </div>
-                    <div className="text-sm text-red-700 mt-0.5">{error}</div>
+                    <div className="text-sm text-red-700 dark:text-red-400 mt-0.5">{error}</div>
                   </div>
                 </div>
               )}
@@ -284,7 +263,7 @@ export default function AddServiceDialog({
                   type="button"
                   onClick={handleClose}
                   disabled={loading}
-                  className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                  className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition font-medium disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -309,8 +288,8 @@ export default function AddServiceDialog({
 
               {/* Info Note */}
               {loading && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <div className="text-xs text-blue-700">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-lg p-3">
+                  <div className="text-xs text-blue-700 dark:text-blue-300">
                     <div className="font-medium mb-1">⏳ Processing...</div>
                     <div>
                       Creating service and starting security scan. You'll be

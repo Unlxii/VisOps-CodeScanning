@@ -113,8 +113,7 @@ export default function PipelineView({
         status === "FAILED_SECURITY";
 
       if (!isFinalState) {
-        // ✨ ถ้ายังไม่จบ -> สั่ง Sync อัตโนมัติเลย!
-        console.log("🔄 Auto-syncing with GitLab...");
+        // ถ้ายังไม่จบ -> สั่ง Sync อัตโนมัติ
         autoSyncGitLab();
       } else {
         // ถ้าจบแล้ว -> หยุดเรียก (เพื่อประหยัดทรัพยากร)
@@ -232,16 +231,6 @@ export default function PipelineView({
     ? run.rawReports.gitleaks.length
     : 0;
   const isHealthy = isSuccess && totalFindings === 0 && gitleaksCount === 0;
-
-  console.log("[PipelineView Debug]", {
-      propScanMode: scanMode,
-      dbScanMode: run.scanMode,
-      status: run.status,
-      isScanOnly,
-      isSuccess,
-      isBlocked,
-      renderButton: !isScanOnly && isSuccess && !isBlocked
-  });
 
   if (isQueued) {
     return (

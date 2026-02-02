@@ -15,30 +15,30 @@ export default function ScanOnlyGuidePage() {
     <div className="px-6 lg:px-8">
       <div className="mx-auto max-w-7xl xl:grid xl:grid-cols-[1fr_250px] xl:gap-8">
         <div className="min-w-0">
-          <nav className="flex items-center text-sm text-slate-500 mb-6">
+          <nav className="flex items-center text-sm text-slate-500 dark:text-slate-400 mb-6">
             <Link
               href="/docs/getting-started"
-              className="hover:text-slate-900 transition-colors"
+              className="hover:text-slate-900 dark:hover:text-white transition-colors"
             >
               Docs
             </Link>
             <ChevronRight size={14} className="mx-2" />
-            <span className="font-medium text-slate-900">Scan Only Guide</span>
+            <span className="font-medium text-slate-900 dark:text-white">Scan Only Guide</span>
           </nav>
 
-          <h1 className="scroll-m-20 text-3xl font-bold tracking-tight text-slate-900 mb-6">
+          <h1 className="scroll-m-20 text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
             Scan Only Mode
           </h1>
-          <p className="text-base text-slate-600 mb-10 leading-7">
+          <p className="text-base text-slate-600 dark:text-slate-400 mb-10 leading-7">
             คู่มือการใช้งานโหมดตรวจสอบความปลอดภัยซอร์สโค้ด (Source Code Audit)
             โดยไม่มีการสร้าง Artifacts
           </p>
 
           <section id="overview" className="mb-12 scroll-mt-24">
-            <h3 className="text-lg font-semibold text-slate-900 mb-3">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">
               Use Cases
             </h3>
-            <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600 marker:text-slate-400">
+            <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600 dark:text-slate-400 marker:text-slate-400 dark:marker:text-slate-500">
               <li>ตรวจสอบความปลอดภัยเบื้องต้น (Initial Audit)</li>
               <li>ตรวจสอบคุณภาพโค้ดก่อนทำ Pull Request</li>
               <li>สแกนโปรเจกต์ที่ยังไม่มี Dockerfile</li>
@@ -46,27 +46,27 @@ export default function ScanOnlyGuidePage() {
           </section>
 
           <section id="walkthrough" className="mb-16 scroll-mt-24">
-            <h2 className="text-xl font-semibold text-slate-900 mb-6 pb-2 border-b border-slate-100">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-6 pb-2 border-b border-slate-100 dark:border-slate-800">
               Walkthrough
             </h2>
-            <ol className="list-decimal pl-5 space-y-6 text-slate-600 marker:text-slate-900 marker:font-medium">
+            <ol className="list-decimal pl-5 space-y-6 text-slate-600 dark:text-slate-400 marker:text-slate-900 dark:marker:text-white marker:font-medium">
               <li>
-                <strong className="text-slate-900">Select Account</strong>
+                <strong className="text-slate-900 dark:text-white">Select Account</strong>
                 <p className="text-sm mt-1">
                   เลือก GitHub Account ที่มีสิทธิ์เข้าถึง Repository ที่ต้องการ
                 </p>
               </li>
               <li>
-                <strong className="text-slate-900">Configure Repository</strong>
+                <strong className="text-slate-900 dark:text-white">Configure Repository</strong>
                 <p className="text-sm mt-1">
                   ระบุ Git URL และตั้งชื่อ Service Name
                 </p>
-                <code className="block mt-2 bg-slate-50 px-3 py-2 rounded text-xs font-mono border border-slate-100">
+                <code className="block mt-2 bg-slate-50 dark:bg-slate-900 px-3 py-2 rounded text-xs font-mono border border-slate-100 dark:border-slate-800">
                   https://github.com/org/repo.git
                 </code>
               </li>
               <li>
-                <strong className="text-slate-900">Start Scan</strong>
+                <strong className="text-slate-900 dark:text-white">Start Scan</strong>
                 <p className="text-sm mt-1">
                   กดปุ่ม <b>Start Security Scan</b>{" "}
                   ระบบจะนำท่านไปยังหน้าผลลัพธ์ทันที
@@ -76,22 +76,22 @@ export default function ScanOnlyGuidePage() {
           </section>
 
           <section id="results" className="mb-16 scroll-mt-24">
-            <h2 className="text-xl font-semibold text-slate-900 mb-6 pb-2 border-b border-slate-100">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-6 pb-2 border-b border-slate-100 dark:border-slate-800">
               Understanding Results
             </h2>
             <div className="space-y-4">
               <div>
-                <h3 className="font-medium text-slate-900 mb-1">
+                <h3 className="font-medium text-slate-900 dark:text-white mb-1">
                   Critical Findings
                 </h3>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   สิ่งที่ต้องแก้ไขทันที เช่น Private Key หรือ API Token
                   ที่หลุดมาในโค้ด
                 </p>
               </div>
               <div>
-                <h3 className="font-medium text-slate-900 mb-1">Report File</h3>
-                <p className="text-sm text-slate-600">
+                <h3 className="font-medium text-slate-900 dark:text-white mb-1">Report File</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   ระบบจะสร้างไฟล์ JSON Report
                   ให้ดาวน์โหลดเมื่อกระบวนการเสร็จสิ้น
                 </p>

@@ -263,13 +263,13 @@ export default function DashboardPage() {
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div
             key={i}
-            className="bg-white rounded-xl border border-slate-200 overflow-hidden h-80"
+            className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden h-80"
           >
-            <div className="h-24 bg-slate-200"></div>
+            <div className="h-24 bg-slate-200 dark:bg-slate-800"></div>
             <div className="p-5 space-y-3">
-              <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-              <div className="h-3 bg-slate-100 rounded w-1/2"></div>
-              <div className="h-20 bg-slate-50 rounded mt-4"></div>
+              <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
+              <div className="h-3 bg-slate-100 dark:bg-slate-800/50 rounded w-1/2"></div>
+              <div className="h-20 bg-slate-50 dark:bg-slate-800/30 rounded mt-4"></div>
             </div>
           </div>
         ))}
@@ -285,8 +285,8 @@ export default function DashboardPage() {
           <div
             className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border text-sm font-medium ${
               toast.type === "success"
-                ? "bg-emerald-50 border-emerald-100 text-emerald-800"
-                : "bg-red-50 border-red-100 text-red-800"
+                ? "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-400"
+                : "bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-900/50 text-red-800 dark:text-red-400"
             }`}
           >
             {toast.type === "success" ? (
@@ -302,10 +302,10 @@ export default function DashboardPage() {
       {/* Header Area */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
             Dashboard
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">
             Overview of your security posture
           </p>
         </div>
@@ -313,21 +313,21 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/services"
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
-            <Server size={16} className="text-slate-500" />
+            <Server size={16} className="text-slate-500 dark:text-slate-400" />
             <span className="hidden sm:inline">Services</span>
           </Link>
-          <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
           <div className="flex items-center gap-2">
             <Tooltip content="Only scan code for secrets/vulns">
               <Link
                 href="/scan/scanonly"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all shadow-sm"
               >
                 <Shield
                   size={16}
-                  className="text-slate-500 group-hover:text-slate-700"
+                  className="text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200"
                 />
                 <span className="hidden sm:inline">Scan Only</span>
                 <span className="sm:hidden">Scan</span>
@@ -348,14 +348,14 @@ export default function DashboardPage() {
 
       {/* Content Area */}
       {projects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 bg-white border-2 border-dashed border-gray-300 rounded-2xl text-center">
-          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
-            <Folder size={40} className="text-blue-500" />
+        <div className="flex flex-col items-center justify-center py-24 bg-white dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-2xl text-center">
+          <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-6">
+            <Folder size={40} className="text-blue-500 dark:text-blue-400" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
             No Projects Found
           </h3>
-          <p className="text-gray-500 mb-8 max-w-md mx-auto">
+          <p className="text-gray-500 dark:text-slate-400 mb-8 max-w-md mx-auto">
             Get started by creating your first project to scan and analyze your
             code security.
           </p>
@@ -369,16 +369,16 @@ export default function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 pb-20">
           <div
-            className="bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 flex flex-col items-center justify-center min-h-[350px] cursor-pointer group"
+            className="bg-slate-50 dark:bg-slate-900/50 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all duration-200 flex flex-col items-center justify-center min-h-[350px] cursor-pointer group"
             onClick={() => router.push("/scan/build")}
           >
-            <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
-              <Plus className="w-8 h-8 text-blue-600" />
+            <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
+              <Plus className="w-8 h-8 text-blue-600 dark:text-blue-500" />
             </div>
-            <h3 className="font-semibold text-slate-700 text-lg">
+            <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-lg">
               New Project
             </h3>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               Start a new scan pipeline
             </p>
           </div>
@@ -386,9 +386,9 @@ export default function DashboardPage() {
           {projects.map((project) => (
             <div
               key={project.id}
-              className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col group h-full"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col group h-full"
             >
-              <div className="px-5 py-5 border-b border-slate-100 bg-gradient-to-r from-slate-800 to-slate-900 relative rounded-t-xl">
+              <div className="px-5 py-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-slate-800 to-slate-900 relative rounded-t-xl">
                 <div className="flex justify-between items-start mb-2">
                   <div className="min-w-0 pr-8">
                     <div className="flex items-center gap-2 mb-1">
@@ -456,11 +456,11 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="flex-1 p-5 space-y-3 bg-white">
+              <div className="flex-1 p-5 space-y-3 bg-white dark:bg-slate-900">
                 {project.services.length === 0 ? (
                   <div className="text-center py-10 h-full flex flex-col justify-center items-center">
-                    <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mb-2">
-                      <Server className="text-slate-300" size={20} />
+                    <div className="w-10 h-10 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-2">
+                      <Server className="text-slate-300 dark:text-slate-600" size={20} />
                     </div>
                     <p className="text-sm text-slate-400 italic mb-3">
                       No services configured
@@ -476,24 +476,30 @@ export default function DashboardPage() {
                   project.services.slice(0, 3).map((service) => (
                     <div
                       key={service.id}
-                      className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-colors group/item"
+                      className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-500/50 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors group/item"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-slate-700 truncate">
+                          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
                             {service.serviceName}
                           </p>
                           {service.scans[0] && (
                             <Tooltip
-                              content={`Status: ${service.scans[0].status}`}
+                              content={`Status: ${
+                                service.scans[0].status === "QUEUED"
+                                  ? "Waiting in Queue"
+                                  : service.scans[0].status
+                              }`}
                             >
                               <span
                                 className={`w-2 h-2 rounded-full flex-shrink-0 cursor-help ${
                                   service.scans[0].status === "SUCCESS"
                                     ? "bg-emerald-500"
-                                    : service.scans[0].status.includes("FAILED")
-                                      ? "bg-red-500"
-                                      : "bg-blue-500 animate-pulse"
+                                    : service.scans[0].status === "QUEUED"
+                                      ? "bg-orange-400 animate-pulse"
+                                      : service.scans[0].status.includes("FAILED")
+                                        ? "bg-red-500"
+                                        : "bg-blue-500 animate-pulse"
                                 }`}
                               />
                             </Tooltip>
@@ -510,12 +516,12 @@ export default function DashboardPage() {
                             service.scans[0].vulnHigh > 0) && (
                             <div className="flex gap-1 mt-1.5">
                               {service.scans[0].vulnCritical > 0 && (
-                                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 rounded font-bold">
+                                <span className="text-[10px] bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 px-1.5 rounded font-bold">
                                   {service.scans[0].vulnCritical} C
                                 </span>
                               )}
                               {service.scans[0].vulnHigh > 0 && (
-                                <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 rounded font-bold">
+                                <span className="text-[10px] bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 px-1.5 rounded font-bold">
                                   {service.scans[0].vulnHigh} H
                                 </span>
                               )}
@@ -543,7 +549,7 @@ export default function DashboardPage() {
                                 lastScanMode: mode,
                               });
                             }}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors"
                           >
                             <RefreshCw size={14} />
                           </button>
@@ -553,7 +559,7 @@ export default function DashboardPage() {
                             <Link
                               href={`/scan/${service.scans[0].pipelineId}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-100 rounded transition-colors block"
+                              className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors block"
                             >
                               <Eye size={14} />
                             </Link>
@@ -564,16 +570,16 @@ export default function DashboardPage() {
                   ))
                 )}
                 {project.services.length > 3 && (
-                  <p className="text-xs text-center text-slate-400 pt-2 border-t border-slate-50 mt-auto">
+                  <p className="text-xs text-center text-slate-400 pt-2 border-t border-slate-50 dark:border-slate-800 mt-auto">
                     +{project.services.length - 3} more services
                   </p>
                 )}
               </div>
 
-              <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center mt-auto rounded-b-xl">
+              <div className="px-5 py-3 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center mt-auto rounded-b-xl">
                 <Link
                   href={`/scan/history?projectId=${project.id}`}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1"
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline flex items-center gap-1"
                 >
                   History <ExternalLink size={10} />
                 </Link>
@@ -588,7 +594,7 @@ export default function DashboardPage() {
                   <Tooltip content="Compare Scans">
                     <Link
                       href={`/scan/compare?projectId=${project.id}`}
-                      className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors ml-1 block"
+                      className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors ml-1 block"
                     >
                       <TrendingUp size={14} />
                     </Link>
@@ -597,7 +603,7 @@ export default function DashboardPage() {
                     <button
                       onClick={() => handleDeleteProject(project.id)}
                       disabled={deletingProject === project.id}
-                      className="text-slate-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors ml-1"
+                      className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors ml-1"
                     >
                       {deletingProject === project.id ? (
                         <Loader2 size={14} className="animate-spin" />
@@ -616,19 +622,19 @@ export default function DashboardPage() {
       {/* ✅ New Smart Rescan Modal */}
       {showRescanModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 border border-gray-100 dark:border-slate-800">
             <div
               className={`px-6 py-5 border-b flex items-center gap-3 ${
                 showRescanModal.lastScanMode === "SCAN_ONLY"
-                  ? "bg-purple-50 border-purple-100"
-                  : "bg-blue-50 border-blue-100"
+                  ? "bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-900/30"
+                  : "bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30"
               }`}
             >
               <div
                 className={`p-2 rounded-lg ${
                   showRescanModal.lastScanMode === "SCAN_ONLY"
-                    ? "bg-white text-purple-600"
-                    : "bg-white text-blue-600"
+                    ? "bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400"
+                    : "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400"
                 }`}
               >
                 {showRescanModal.lastScanMode === "SCAN_ONLY" ? (
@@ -641,17 +647,17 @@ export default function DashboardPage() {
                 <h3
                   className={`font-bold text-lg ${
                     showRescanModal.lastScanMode === "SCAN_ONLY"
-                      ? "text-purple-900"
-                      : "text-blue-900"
+                      ? "text-purple-900 dark:text-purple-300"
+                      : "text-blue-900 dark:text-blue-300"
                   }`}
                 >
                   {showRescanModal.lastScanMode === "SCAN_ONLY"
                     ? "Security Audit"
                     : "Build & Scan"}
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Service:{" "}
-                  <span className="font-semibold">
+                  <span className="font-semibold dark:text-slate-200">
                     {showRescanModal.serviceName}
                   </span>
                 </p>
@@ -660,7 +666,7 @@ export default function DashboardPage() {
 
             <div className="p-6 space-y-5">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5 flex items-center gap-1">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5 flex items-center gap-1">
                   <Tag size={12} />
                   {showRescanModal.lastScanMode === "SCAN_ONLY"
                     ? "Version Label"
@@ -674,7 +680,7 @@ export default function DashboardPage() {
                       ? "e.g. v1.2-audit"
                       : "e.g. latest, v2.0"
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-sm text-gray-900 dark:text-white"
                   autoFocus
                 />
                 <p className="text-[10px] text-slate-400 mt-1">
@@ -689,8 +695,8 @@ export default function DashboardPage() {
                 disabled={!!scanningService}
                 className={`w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-white rounded-lg shadow-sm transition-all hover:shadow-md active:scale-95 ${
                   showRescanModal.lastScanMode === "SCAN_ONLY"
-                    ? "bg-purple-600 hover:bg-purple-700"
-                    : "bg-blue-600 hover:bg-blue-700"
+                    ? "bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600"
+                    : "bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
                 }`}
               >
                 {scanningService ? (
@@ -703,7 +709,7 @@ export default function DashboardPage() {
 
               <button
                 onClick={() => setShowRescanModal(null)}
-                className="w-full py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                className="w-full py-2 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
                 Cancel
               </button>
@@ -715,7 +721,7 @@ export default function DashboardPage() {
       {/* Edit Modal (Preserved) */}
       {editingProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 border border-gray-100 dark:border-slate-700">
             <div className="px-6 py-4 border-b border-slate-700 bg-gradient-to-r from-slate-800 to-slate-900 flex justify-between items-center">
               <h3 className="font-bold text-white">Edit Project</h3>
               <button
@@ -727,7 +733,7 @@ export default function DashboardPage() {
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1">
                   Project Name
                 </label>
                 <input
@@ -738,11 +744,11 @@ export default function DashboardPage() {
                       groupName: e.target.value,
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-900 dark:text-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1">
                   Repo URL
                 </label>
                 <input
@@ -753,13 +759,13 @@ export default function DashboardPage() {
                       repoUrl: e.target.value,
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-sm text-gray-900 dark:text-white"
                 />
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   onClick={() => setEditingProject(null)}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
