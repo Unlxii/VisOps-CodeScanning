@@ -17,6 +17,7 @@ import {
   ArrowRight,
   AlertTriangle,
 } from "lucide-react";
+import { generateId, extractRepoName, generateImageName } from "@/lib/utils";
 
 // Types
 interface ServiceConfig {
@@ -50,31 +51,6 @@ const MonorepoContext = createContext<{
   submit: () => Promise<void>;
 } | null>(null);
 
-// Helper to generate unique IDs
-const generateId = () => Math.random().toString(36).substring(2, 9);
-
-// Helper to extract repo name from URL
-const extractRepoName = (url: string): string => {
-  if (!url) return "";
-  const cleanUrl = url.trim().replace(/\.git$/, "");
-  const parts = cleanUrl.split(/[\/:]/);
-  return (
-    parts[parts.length - 1]?.toLowerCase().replace(/[^a-z0-9-]/g, "") || ""
-  );
-};
-
-// Generate image name from repo + context
-const generateImageName = (repoUrl: string, contextPath: string): string => {
-  const repoName = extractRepoName(repoUrl);
-  if (contextPath && contextPath !== ".") {
-    const suffix = contextPath
-      .replace(/\//g, "-")
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, "");
-    return `${repoName}-${suffix}`;
-  }
-  return repoName;
-};
 
 function MonorepoProvider({
   children,

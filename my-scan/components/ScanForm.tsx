@@ -1,7 +1,7 @@
 // components/ScanForm.tsx
 "use client";
 
-import React, { useState, useEffect, Suspense, useRef } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Loader2,
@@ -11,164 +11,17 @@ import {
   FolderTree,
   Server,
   Box,
-  HelpCircle,
   Github,
   ShieldCheck,
   X,
-  ChevronDown,
-  Check,
-  Plus,
   Tag,
 } from "lucide-react";
 
+// Use shared components
+import AccountSelector from "./ui/AccountSelector";
+
 type Props = {
   buildMode: boolean;
-};
-
-// --- Helper Components ---
-const InfoTooltip = ({ text }: { text: string }) => (
-  <div className="group relative inline-flex items-center ml-1.5">
-    <HelpCircle
-      size={14}
-      className="text-slate-400 hover:text-blue-500 cursor-help"
-    />
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-3 bg-slate-800 dark:bg-slate-700 text-white text-xs rounded-lg shadow-xl z-50 pointer-events-none leading-relaxed">
-      {text}
-      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
-    </div>
-  </div>
-);
-
-interface AccountOption {
-  id: string;
-  name: string;
-  username: string;
-  isDefault: boolean;
-  provider: "GITHUB" | "DOCKER";
-}
-
-const AccountSelector = ({
-  label,
-  icon: Icon,
-  options,
-  selectedId,
-  onChange,
-  isLoading,
-}: {
-  label: string;
-  icon: any;
-  options: AccountOption[];
-  selectedId: string;
-  onChange: (id: string) => void;
-  isLoading: boolean;
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const selectedOption = options.find((o) => o.id === selectedId);
-
-  return (
-    <div className="relative" ref={containerRef}>
-      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">
-        {label}
-      </label>
-      <button
-        type="button"
-        onClick={() => !isLoading && setIsOpen(!isOpen)}
-        disabled={isLoading}
-        className={`w-full text-left border rounded-lg flex items-center justify-between transition-all duration-200 outline-none h-[42px] px-3 ${
-          isOpen
-            ? "border-blue-500 ring-1 ring-blue-500 dark:ring-blue-400 dark:border-blue-400"
-            : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
-        } ${
-          isLoading ? "bg-slate-50 dark:bg-slate-800 opacity-70 cursor-not-allowed" : "bg-white dark:bg-slate-950"
-        }`}
-      >
-        <div className="flex items-center gap-2 overflow-hidden w-full">
-          <Icon
-            size={16}
-            className={selectedOption ? "text-slate-700 dark:text-slate-200" : "text-slate-400"}
-          />
-          <div className="flex-1 min-w-0 flex items-center gap-2">
-            {selectedOption ? (
-              <>
-                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                  {selectedOption.username}
-                </span>
-                <span className="text-xs text-slate-400 truncate hidden xl:inline-block">
-                  ({selectedOption.name})
-                </span>
-              </>
-            ) : (
-              <span className="text-sm text-slate-500 dark:text-slate-400">Select...</span>
-            )}
-          </div>
-          <ChevronDown size={14} className="text-slate-400 shrink-0" />
-        </div>
-      </button>
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg shadow-xl max-h-60 overflow-y-auto py-1 animate-in fade-in zoom-in-95 duration-100">
-          {options.length > 0 ? (
-            options.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => {
-                  onChange(option.id);
-                  setIsOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors ${
-                  selectedId === option.id ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-slate-50 dark:hover:bg-slate-800"
-                }`}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                      {option.username}
-                    </span>
-                    {option.isDefault && (
-                      <span className="bg-slate-100 dark:bg-slate-800 text-[9px] px-1 rounded border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
-                        DEFAULT
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[10px] text-slate-400 truncate">
-                    {option.name}
-                  </div>
-                </div>
-                {selectedId === option.id && (
-                  <Check size={14} className="text-blue-600 dark:text-blue-400" />
-                )}
-              </button>
-            ))
-          ) : (
-            <div className="p-3 text-center">
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">No accounts.</p>
-              <a
-                href="/settings"
-                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center gap-1"
-              >
-                <Plus size={10} /> Add
-              </a>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
 };
 
 function ScanFormContent({ buildMode }: Props) {

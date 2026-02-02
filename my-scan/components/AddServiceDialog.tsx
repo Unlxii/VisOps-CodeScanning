@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Loader2, AlertCircle, Package } from "lucide-react";
-import SimpleTooltip from "@/components/ui/Tooltip"; // ✅ Import Tooltip
+import SimpleTooltip from "@/components/ui/Tooltip";
+import { generateImageName } from "@/lib/utils";
 
 interface AddServiceDialogProps {
   groupId: string;
@@ -12,27 +13,6 @@ interface AddServiceDialogProps {
   iconOnly?: boolean;
 }
 
-// Helper: Extract repo name from URL
-const extractRepoName = (url: string): string => {
-  const cleanUrl = url.replace(/\.git$/, "").replace(/\/$/, "");
-  const parts = cleanUrl.split(/[\/:]/);
-  return (
-    parts[parts.length - 1]?.toLowerCase().replace(/[^a-z0-9-]/g, "") || ""
-  );
-};
-
-// Helper: Generate Docker image name from repo + context
-const generateImageName = (repoUrl: string, contextPath: string): string => {
-  const repoName = extractRepoName(repoUrl);
-  if (contextPath && contextPath !== ".") {
-    const suffix = contextPath
-      .replace(/\//g, "-")
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, "");
-    return `${repoName}-${suffix}`;
-  }
-  return repoName;
-};
 
 export default function AddServiceDialog({
   groupId,
