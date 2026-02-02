@@ -152,6 +152,7 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
               
               return (
                 <Link
+                  id={`sidebar-nav-${item.label.toLowerCase().replace(" ", "-")}`}
                   key={item.href}
                   href={item.href}
                   onClick={handleLinkClick}

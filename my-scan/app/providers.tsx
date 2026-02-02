@@ -113,6 +113,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 
 // ... existing imports
 
+import { TourProvider } from "@/components/providers/TourProvider";
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
@@ -122,7 +124,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
-        <AppLayout>{children}</AppLayout>
+        <TourProvider>
+          <AppLayout>{children}</AppLayout>
+        </TourProvider>
       </ThemeProvider>
     </SessionProvider>
   );

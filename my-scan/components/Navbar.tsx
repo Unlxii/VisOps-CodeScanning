@@ -116,7 +116,7 @@ export default function Navbar() {
       <div className="flex items-center gap-3">
         <ThemeToggle />
         
-        <div className="relative" ref={dropdownRef}>
+        <div id="navbar-profile-section" className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center gap-3 p-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 focus:outline-none group"

@@ -325,7 +325,7 @@ export default function DashboardPage() {
 
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
            {/* Search Projects */}
-          <div className="relative w-full sm:w-64">
+          <div id="header-search-bar" className="relative w-full sm:w-64">
              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search size={16} className="text-slate-400" />
              </div>
@@ -383,7 +383,7 @@ export default function DashboardPage() {
             Get started by choosing a scan method below.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 w-full max-w-lg px-4">
+          <div id="tour-create-project-options" className="flex flex-col sm:flex-row gap-4 w-full max-w-lg px-4">
              {/* Scan Only Button */}
              <button
                 onClick={() => router.push("/scan/scanonly")}
