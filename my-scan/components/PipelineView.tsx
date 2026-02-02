@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Loader2, AlertCircle, XCircle, GitCompare } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { mutate } from "swr";
 
 import ConfirmBuildButton from "./ReleaseButton";
 import { Run, ComparisonData } from "./pipeline/types";
@@ -169,6 +170,9 @@ export default function PipelineView({
       const res = await fetch(`/api/scan/cancel/${scanId}`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to cancel scan");
       await autoSyncGitLab(); // Sync ทันทีหลังกดยกเลิก
+      // Force refresh dashboard and active scans
+      mutate("/api/dashboard");
+      mutate("/api/scan/status/active");
     } catch (err: any) {
       console.error("Cancel error:", err);
       alert(err.message || "Failed to cancel scan");

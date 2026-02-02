@@ -30,7 +30,7 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Scan History", href: "/scan/history", icon: History },
-    { label: "Documents", href: "/docs/scanners", icon: BookOpen },
+    { label: "Documents", href: "/docs/getting-started", icon: BookOpen },
   ];
 
   const adminItems = [
@@ -100,38 +100,71 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
             >
               {isCollapsed ? "Menu" : "Main Menu"}
             </p>
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={handleLinkClick}
-                onMouseEnter={(e) => handleMouseEnter(e, item.label)}
-                onMouseLeave={handleMouseLeave}
-                className={`relative flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 group ${
-                  isActive(item.href)
-                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 shadow-sm"
-                    : "text-gray-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md dark:hover:shadow-none hover:text-gray-900 dark:hover:text-gray-200"
-                }`}
-              >
-                <item.icon
-                  size={20}
-                  className={`shrink-0 transition-colors ${
+            {navItems.map((item) => {
+              const isDisabled = (item as any).disabled;
+              const badge = (item as any).badge;
+              
+              const content = (
+                <>
+                  <item.icon
+                    size={20}
+                    className={`shrink-0 transition-colors ${
+                      isDisabled
+                        ? "text-gray-300 dark:text-slate-600"
+                        : isActive(item.href)
+                          ? "text-blue-600"
+                          : "text-gray-400 group-hover:text-gray-600"
+                    }`}
+                  />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-300 ${
+                      isCollapsed
+                        ? "opacity-0 w-0 overflow-hidden"
+                        : "opacity-100 w-auto"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                  {badge && !isCollapsed && (
+                    <span className="ml-auto text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded">
+                      {badge}
+                    </span>
+                  )}
+                </>
+              );
+              
+              const baseClassName = `relative flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 group`;
+              
+              if (isDisabled) {
+                return (
+                  <div
+                    key={item.href}
+                    onMouseEnter={(e) => handleMouseEnter(e, item.label)}
+                    onMouseLeave={handleMouseLeave}
+                    className={`${baseClassName} text-gray-400 dark:text-slate-500 cursor-not-allowed opacity-60`}
+                  >
+                    {content}
+                  </div>
+                );
+              }
+              
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={handleLinkClick}
+                  onMouseEnter={(e) => handleMouseEnter(e, item.label)}
+                  onMouseLeave={handleMouseLeave}
+                  className={`${baseClassName} ${
                     isActive(item.href)
-                      ? "text-blue-600"
-                      : "text-gray-400 group-hover:text-gray-600"
-                  }`}
-                />
-                <span
-                  className={`whitespace-nowrap transition-all duration-300 ${
-                    isCollapsed
-                      ? "opacity-0 w-0 overflow-hidden"
-                      : "opacity-100 w-auto"
+                      ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 shadow-sm"
+                      : "text-gray-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md dark:hover:shadow-none hover:text-gray-900 dark:hover:text-gray-200"
                   }`}
                 >
-                  {item.label}
-                </span>
-              </Link>
-            ))}
+                  {content}
+                </Link>
+              );
+            })}
           </div>
 
           {/* Admin Menu */}

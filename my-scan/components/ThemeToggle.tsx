@@ -23,7 +23,7 @@ export function ThemeToggle() {
   const isDark = theme === "dark";
 
   return (
-    <Tooltip content={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}>
+    <Tooltip content={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"} position="bottom">
       <button
         onClick={() => setTheme(isDark ? "light" : "dark")}
         className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-700"

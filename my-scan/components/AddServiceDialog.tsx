@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Loader2, AlertCircle, Package } from "lucide-react";
 import SimpleTooltip from "@/components/ui/Tooltip";
+import { generateImageName } from "@/lib/utils";
 import DuplicateServiceWarning from "@/components/DuplicateServiceWarning";
 
 interface AddServiceDialogProps {

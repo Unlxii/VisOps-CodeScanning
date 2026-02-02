@@ -1,6 +1,6 @@
 "use client";
 
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import {
   Loader2,
   Activity,
@@ -10,7 +10,7 @@ import {
   Maximize2,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // Types
 interface ActiveScan {
@@ -35,6 +35,7 @@ const fetcher = (url: string) =>
 
 export default function ActiveScanMonitor() {
   const [isMinimized, setIsMinimized] = useState(false);
+  const lastSyncRef = useRef<number>(0);
 
   // Poll Active Scans ทุก 2 วินาที
   const { data, error } = useSWR("/api/scan/status/active", fetcher, {
@@ -45,6 +46,31 @@ export default function ActiveScanMonitor() {
   });
 
   const activeScans: ActiveScan[] = data?.activeScans || [];
+
+  // ✅ Auto-sync: เรียก POST /api/scan/[id] เพื่อ sync สถานะจาก GitLab
+  useEffect(() => {
+    if (activeScans.length === 0) return;
+    
+    // Throttle: sync ทุก 3 วินาที
+    const now = Date.now();
+    if (now - lastSyncRef.current < 3000) return;
+    lastSyncRef.current = now;
+
+    // Sync แต่ละ scan via /sync endpoint
+    activeScans.forEach(async (scan) => {
+      try {
+        await fetch(`/api/scan/${scan.id}/sync`, { method: "POST" });
+      } catch (e) {
+        // Ignore errors
+      }
+    });
+
+    // Refresh active scans list และ dashboard หลัง sync
+    setTimeout(() => {
+      mutate("/api/scan/status/active");
+      mutate("/api/dashboard");
+    }, 1000);
+  }, [activeScans]);
 
   // ถ้ามี error หรือไม่มี data ให้ซ่อนไปเลย
   if (error) return null;

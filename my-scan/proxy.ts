@@ -1,12 +1,12 @@
-// middleware.ts
-// Authentication and authorization middleware using NextAuth
+// proxy.ts
+// Authentication and authorization proxy using NextAuth
 
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import { UserStatus, UserRoles } from "./lib/constants";
 
 export default withAuth(
-  function middleware(req) {
+  function proxy(req) {
     const token = req.nextauth.token;
     const pathname = req.nextUrl.pathname;
     

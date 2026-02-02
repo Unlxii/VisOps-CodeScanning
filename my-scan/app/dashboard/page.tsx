@@ -72,9 +72,15 @@ interface ActiveScan {
   startedAt: string;
 }
 
-// --- Fetcher ---
+// --- Fetcher with no-cache ---
 const fetcher = async (url: string) => {
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    },
+  });
   if (!res.ok) {
     if (res.status === 401) throw new Error("Unauthorized");
     throw new Error("Failed to fetch data");
@@ -121,7 +127,13 @@ export default function DashboardPage() {
   const { data: dashboardData, isLoading: dashboardLoading } = useSWR(
     status === "authenticated" ? "/api/dashboard" : null,
     fetcher,
-    { refreshInterval: 10000, revalidateOnFocus: true },
+    { 
+      // Refresh faster when there are active scans
+      refreshInterval: (activeScansData?.activeScans?.length || 0) > 0 ? 3000 : 5000, 
+      revalidateOnFocus: true,
+      revalidateOnMount: true,
+      dedupingInterval: 1000, // Allow revalidation within 1 second
+    },
   );
 
   const projects: Project[] = dashboardData?.projects || [];
@@ -368,19 +380,50 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 pb-20">
-          <div
-            className="bg-slate-50 dark:bg-slate-900/50 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all duration-200 flex flex-col items-center justify-center min-h-[350px] cursor-pointer group"
-            onClick={() => router.push("/scan/build")}
-          >
-            <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
-              <Plus className="w-8 h-8 text-blue-600 dark:text-blue-500" />
+          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 transition-all duration-200 flex flex-col min-h-[350px] p-5">
+            {/* Header */}
+            <div className="text-center mb-5">
+              <div className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 shadow-sm">
+                <Plus className="w-6 h-6 text-blue-600 dark:text-blue-500" />
+              </div>
+              <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-lg">
+                New Project
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Choose your scan type
+              </p>
             </div>
-            <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-lg">
-              New Project
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Start a new scan pipeline
-            </p>
+            
+            {/* Options */}
+            <div className="flex-1 flex flex-col gap-3">
+              {/* Scan & Build Option */}
+              <button
+                onClick={() => router.push("/scan/build")}
+                className="flex-1 flex items-center gap-4 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all group text-left"
+              >
+                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm">Scan & Build</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Full pipeline with Docker image</p>
+                </div>
+              </button>
+
+              {/* Scan Only Option */}
+              <button
+                onClick={() => router.push("/scan/scanonly")}
+                className="flex-1 flex items-center gap-4 p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all group text-left"
+              >
+                <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm">Scan Only</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Security audit without build</p>
+                </div>
+              </button>
+            </div>
           </div>
 
           {projects.map((project) => (
@@ -433,9 +476,9 @@ export default function DashboardPage() {
                           repoUrl: project.repoUrl,
                         })
                       }
-                      className="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition-colors"
+                      className="absolute top-3 right-3 text-slate-400 hover:text-white p-1 rounded-md hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100"
                     >
-                      <MoreHorizontal size={18} />
+                      <MoreHorizontal size={16} />
                     </button>
                   </Tooltip>
                 </div>
@@ -488,7 +531,9 @@ export default function DashboardPage() {
                               content={`Status: ${
                                 service.scans[0].status === "QUEUED"
                                   ? "Waiting in Queue"
-                                  : service.scans[0].status
+                                  : service.scans[0].status === "CANCELLED"
+                                    ? "Cancelled"
+                                    : service.scans[0].status
                               }`}
                             >
                               <span
@@ -497,9 +542,13 @@ export default function DashboardPage() {
                                     ? "bg-emerald-500"
                                     : service.scans[0].status === "QUEUED"
                                       ? "bg-orange-400 animate-pulse"
-                                      : service.scans[0].status.includes("FAILED")
-                                        ? "bg-red-500"
-                                        : "bg-blue-500 animate-pulse"
+                                      : service.scans[0].status === "CANCELLED"
+                                        ? "bg-slate-400"
+                                        : service.scans[0].status.includes("FAILED") || service.scans[0].status === "BLOCKED"
+                                          ? "bg-red-500"
+                                          : service.scans[0].status === "RUNNING"
+                                            ? "bg-blue-500 animate-pulse"
+                                            : "bg-slate-300"
                                 }`}
                               />
                             </Tooltip>
