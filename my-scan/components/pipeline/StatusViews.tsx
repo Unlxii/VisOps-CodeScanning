@@ -49,9 +49,10 @@ export const QueuedState = ({ onCancel, isCancelling }: QueuedStateProps) => {
 
 interface CancelledStateProps {
   scanId: string;
+  onRescan?: () => void;
 }
 
-export const CancelledState = ({ scanId }: CancelledStateProps) => {
+export const CancelledState = ({ scanId, onRescan }: CancelledStateProps) => {
   return (
     <div className="bg-gray-50 border border-gray-200 rounded-xl p-8">
       <div className="flex flex-col items-center text-center">
@@ -64,9 +65,19 @@ export const CancelledState = ({ scanId }: CancelledStateProps) => {
         <p className="text-gray-600 mb-4 max-w-md">
           This scan was cancelled and will not be processed.
         </p>
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-gray-500 mb-6">
           Pipeline ID: <span className="font-mono">{scanId}</span>
         </div>
+        
+        {onRescan && (
+            <button
+              onClick={onRescan}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm"
+            >
+              <Loader2 className="w-4 h-4" />
+              Restart Scan
+            </button>
+        )}
       </div>
     </div>
   );
