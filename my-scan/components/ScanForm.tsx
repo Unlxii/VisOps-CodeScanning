@@ -482,6 +482,45 @@ function ScanFormContent({ buildMode }: Props) {
                 <X />
               </button>
             </div>
+            
+            {/* Template Selector Bar */}
+            <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2 flex items-center gap-3">
+               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Apply Template:</span>
+               <select 
+                 className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm rounded px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500/50"
+                 onChange={async (e) => {
+                    const stack = e.target.value;
+                    if(stack) {
+                       if(customDockerfileContent && !confirm("Overwrite current Dockerfile content?")) return;
+                       
+                       try {
+                         const res = await fetch(`/api/templates?stack=${stack}`);
+                         const text = await res.text();
+                         setCustomDockerfileContent(text);
+                         setUseCustomDockerfile(true);
+                       } catch(err) {
+                         alert("Failed to load template");
+                       }
+                    }
+                 }}
+                 defaultValue=""
+               >
+                  <option value="" disabled>-- Select a Preset --</option>
+                  <option value="node">Node.js</option>
+                  <option value="python">Python</option>
+                  <option value="java-maven">Java (Maven)</option>
+                  <option value="go">Go Lang</option>
+                  <option value="dotnet">.NET Core</option>
+                  <option value="php">PHP</option>
+                  <option value="ruby">Ruby</option>
+                  <option value="rust">Rust</option>
+                  <option value="default">Generic / Trivy</option>
+               </select>
+               <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto">
+                 Presets managed by Admin
+               </span>
+            </div>
+
             <div className="flex-1 bg-[#1e1e1e]">
               <textarea
                 className="w-full h-full bg-transparent text-slate-200 font-mono p-4 outline-none resize-none"
