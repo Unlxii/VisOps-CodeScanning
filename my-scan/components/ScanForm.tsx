@@ -204,7 +204,7 @@ function ScanFormContent({ buildMode }: Props) {
                     : "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
                 }`}
               >
-                {buildMode ? <Server size={20} /> : <ShieldCheck size={20} />}
+                {/* {buildMode ? <Server size={20} /> : <ShieldCheck size={20} />} */}
               </div>
               <div>
                 <h2 className="text-lg font-bold text-slate-800 dark:text-white leading-none">

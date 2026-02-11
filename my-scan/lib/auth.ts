@@ -37,10 +37,9 @@ export const authOptions: NextAuthOptions = {
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-          // Set ADMIN role based on environment variable (no hardcoding)
-          role: (process.env.ADMIN_EMAIL && profile.email === process.env.ADMIN_EMAIL) ? "ADMIN" : "USER",
-          status: "ACTIVE",
-          isSetupComplete: true,
+          role: "user",
+          status: "PENDING",
+          isSetupComplete: false,
         };
       },
     }),
