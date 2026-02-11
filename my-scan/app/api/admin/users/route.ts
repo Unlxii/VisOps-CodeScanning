@@ -27,6 +27,7 @@ export async function GET() {
           },
         },
         groups: {
+          where: { isActive: true },
           select: {
             services: {
               select: {

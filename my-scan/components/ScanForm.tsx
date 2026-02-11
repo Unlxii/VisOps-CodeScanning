@@ -22,6 +22,18 @@ import DuplicateServiceWarning from "@/components/DuplicateServiceWarning";
 // Use shared components
 import AccountSelector from "./ui/AccountSelector";
 
+const TEMPLATE_OPTIONS = [
+  { value: "node", label: "Node.js" },
+  { value: "python", label: "Python" },
+  { value: "java-maven", label: "Java (Maven)" },
+  { value: "go", label: "Go Lang" },
+  { value: "dotnet", label: ".NET Core" },
+  { value: "php", label: "PHP" },
+  { value: "ruby", label: "Ruby" },
+  { value: "rust", label: "Rust" },
+  { value: "default", label: "Generic / Trivy" },
+];
+
 type Props = {
   buildMode: boolean;
 };
@@ -50,6 +62,7 @@ function ScanFormContent({ buildMode }: Props) {
 
   const [useCustomDockerfile, setUseCustomDockerfile] = useState(false);
   const [customDockerfileContent, setCustomDockerfileContent] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState("");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -258,7 +271,7 @@ function ScanFormContent({ buildMode }: Props) {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">
-                      Git URL
+                      Git/GitHub URL
                     </label>
                     <input
                       type="url"
@@ -391,6 +404,13 @@ function ScanFormContent({ buildMode }: Props) {
                         ? "Edit Custom Dockerfile"
                         : "Customize Dockerfile"}
                     </button>
+                    {useCustomDockerfile && selectedTemplate && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
+                        <Code2 size={14} />
+                        <span className="font-semibold">Template:</span>
+                        {TEMPLATE_OPTIONS.find((t) => t.value === selectedTemplate)?.label}
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
@@ -488,6 +508,7 @@ function ScanFormContent({ buildMode }: Props) {
                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Apply Template:</span>
                <select 
                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm rounded px-3 py-1 outline-none focus:ring-2 focus:ring-blue-500/50"
+                 value={selectedTemplate}
                  onChange={async (e) => {
                     const stack = e.target.value;
                     if(stack) {
@@ -498,23 +519,19 @@ function ScanFormContent({ buildMode }: Props) {
                          const text = await res.text();
                          setCustomDockerfileContent(text);
                          setUseCustomDockerfile(true);
+                         setSelectedTemplate(stack);
                        } catch(err) {
                          alert("Failed to load template");
                        }
                     }
                  }}
-                 defaultValue=""
                >
                   <option value="" disabled>-- Select a Preset --</option>
-                  <option value="node">Node.js</option>
-                  <option value="python">Python</option>
-                  <option value="java-maven">Java (Maven)</option>
-                  <option value="go">Go Lang</option>
-                  <option value="dotnet">.NET Core</option>
-                  <option value="php">PHP</option>
-                  <option value="ruby">Ruby</option>
-                  <option value="rust">Rust</option>
-                  <option value="default">Generic / Trivy</option>
+                  {TEMPLATE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                </select>
                <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto">
                  Presets managed by Admin
