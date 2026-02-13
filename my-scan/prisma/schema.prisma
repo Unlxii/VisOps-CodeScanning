@@ -140,6 +140,7 @@ model ScanHistory {
   acknowledgedBy         String?
   buildLogs              String?
   completedAt            DateTime?
+  description            String?        // [NEW] User provided description
   errorMessage           String?
   imagePushed            Boolean        @default(false)
   isCriticalAcknowledged Boolean        @default(false)
@@ -148,6 +149,8 @@ model ScanHistory {
   previousScanId         String?
   queuedAt               DateTime       @default(now())
   reportJson             Json?
+  scanLogs               Json?          // [NEW] Array of { state, timestamp, message }
+  pipelineJobs           Json?          // [NEW] Array of GitLab Jobs: { id, name, status, stage, duration, ... }
   scanMode               String         @default("SCAN_AND_BUILD")
   serviceId              String
   startedAt              DateTime?

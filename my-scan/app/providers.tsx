@@ -72,7 +72,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     pathname === "/pending" ||
     (pathname === "/" && status === "unauthenticated");
 
-  if (status === "loading") return null; // หรือใส่ Loading Spinner ตรงนี้
+  if (status === "loading") return null;
 
   // Case 1: หน้า Public หรือยังไม่ Login -> แสดงเต็มจอปกติ
   if (isPublicOrAuthPage || !session) {

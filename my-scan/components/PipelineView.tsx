@@ -5,6 +5,7 @@ import { Loader2, AlertCircle, XCircle, GitCompare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
 
+import PipelineStepper from "@/components/PipelineStepper"; // [NEW]
 import ConfirmBuildButton from "./ReleaseButton";
 import { Run, ComparisonData } from "./pipeline/types";
 import { QueuedState, CancelledState } from "./pipeline/StatusViews";
@@ -317,6 +318,11 @@ export default function PipelineView({
             Compare Results
           </button>
         </div>
+      )}
+
+      {/* [NEW] Pipeline Stepper */}
+      {run && (run as any).pipelineJobs && (
+        <PipelineStepper jobs={(run as any).pipelineJobs} status={run.status} />
       )}
 
       {/* ปุ่ม Release จะโผล่มาเองอัตโนมัติเมื่อ isSuccess เป็นจริง */}

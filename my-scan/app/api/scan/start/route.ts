@@ -24,6 +24,7 @@ const ScanStartSchema = z.object({
   projectName: z.string().optional(),
   customDockerfile: z.string().optional(),
   trivyScanMode: z.enum(["fast", "full"]).optional(),
+  description: z.string().optional(), // [NEW] Description
   force: z.boolean().default(false),
 });
 
@@ -55,6 +56,7 @@ export async function POST(req: Request) {
       imageName: manualImageName,
       projectName: manualProjectName,
       force,
+      description,
     } = parseResult.data;
 
     // Validate scan mode
@@ -224,6 +226,7 @@ export async function POST(req: Request) {
           imageName: finalConfig.imageName,
           projectName: finalConfig.projectName,
         },
+        description: description, // [NEW] Save description
       },
     });
 

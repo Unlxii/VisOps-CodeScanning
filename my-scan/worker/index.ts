@@ -96,6 +96,17 @@ async function setupQueue(ch: Channel, queueName: string) {
   });
 }
 
+// [NEW] Helper to append logs
+function appendLog(currentLogs: any, status: string, message?: string) {
+  const logs = Array.isArray(currentLogs) ? currentLogs : [];
+  logs.push({
+    status,
+    timestamp: new Date().toISOString(),
+    message,
+  });
+  return logs;
+}
+
 async function handleMessage(msg: ConsumeMessage, ch: Channel) {
   const jobContent = msg.content.toString();
   let job: ScanJob;
@@ -110,7 +121,11 @@ async function handleMessage(msg: ConsumeMessage, ch: Channel) {
 
   console.log(`[Processing] Job ${job.id} (${job.type})`);
   
-  const currentJob = await prisma.scanHistory.findUnique({ where: { id: job.scanHistoryId }, select: { status: true } });
+  const currentJob = await prisma.scanHistory.findUnique({ 
+    where: { id: job.scanHistoryId }, 
+    select: { status: true, scanLogs: true } 
+  });
+  
   if (!currentJob || currentJob.status === "CANCELLED" || currentJob.status === "FAILED_TRIGGER") {
       console.warn(`[Worker] Job ${job.id} was ${currentJob?.status || "deleted"}. Skipping.`);
       ch.ack(msg);
@@ -120,7 +135,10 @@ async function handleMessage(msg: ConsumeMessage, ch: Channel) {
   try {
     await prisma.scanHistory.update({
       where: { id: job.scanHistoryId },
-      data: { status: "RUNNING" },
+      data: { 
+        status: "RUNNING",
+        scanLogs: appendLog(currentJob.scanLogs, "RUNNING", "Worker started processing job")
+      },
     });
 
     const pipelineId = await triggerGitLab(job);
@@ -130,6 +148,7 @@ async function handleMessage(msg: ConsumeMessage, ch: Channel) {
       data: {
         pipelineId: String(pipelineId),
         scanId: String(pipelineId),
+        scanLogs: appendLog(currentJob.scanLogs, "PIPELINE_CREATED", `Pipeline ID: ${pipelineId}`)
       },
     });
 
@@ -148,9 +167,16 @@ async function handleMessage(msg: ConsumeMessage, ch: Channel) {
     }
 
     try {
+      // Re-fetch to get latest logs in case of race/interleaved updates (unlikely here but safe)
+      const latestJob = await prisma.scanHistory.findUnique({ where: { id: job.scanHistoryId }, select: { scanLogs: true } });
+      
       await prisma.scanHistory.update({
         where: { id: job.scanHistoryId },
-        data: { status: "FAILED_TRIGGER", errorMessage: errorMessage },
+        data: { 
+          status: "FAILED_TRIGGER", 
+          errorMessage: errorMessage,
+          scanLogs: appendLog(latestJob?.scanLogs, "FAILED_TRIGGER", errorMessage)
+        },
       });
     } catch (dbError) {
       console.error("Failed to update DB status:", dbError);
@@ -327,26 +353,68 @@ async function pollRunningScans() {
         status: "RUNNING",
         AND: [
             { pipelineId: { not: { equals: null } } },
-            // Exclude waiting/pending IDs generated locally
             { pipelineId: { not: { startsWith: "WAITING" } } }
         ]
       },
-      select: { id: true, pipelineId: true }
+      select: { id: true, pipelineId: true, scanLogs: true, startedAt: true } // [NEW] Select startedAt
     });
 
     if (runningScans.length === 0) return;
 
-    console.log(`[Poller] Checking ${runningScans.length} running scans...`);
+    // console.log(`[Poller] Checking ${runningScans.length} running scans...`);
+
+    const TIMEOUT_MS = 60 * 60 * 1000; // 60 Minutes
 
     for (const scan of runningScans) {
         if (!scan.pipelineId) continue;
+
+        // [NEW] Zombie Detection
+        if (scan.startedAt) {
+            const age = Date.now() - new Date(scan.startedAt).getTime();
+            if (age > TIMEOUT_MS) {
+                console.warn(`[Zombie] Scan ${scan.id} (Pipeline ${scan.pipelineId}) timed out (>60m). Killing...`);
+                await prisma.scanHistory.update({
+                    where: { id: scan.id },
+                    data: {
+                        status: "FAILED",
+                        errorMessage: "Job timed out (Zombie Detection)",
+                        completedAt: new Date(),
+                        scanLogs: appendLog(scan.scanLogs, "FAILED", "Job timed out (Zombie Detection)")
+                    }
+                });
+                continue; // Skip GitLab check if we killed it
+            }
+        }
         
         try {
+            // 1. Fetch Pipeline Status
             const url = `${GITLAB_API_URL}/projects/${GITLAB_PROJECT_ID}/pipelines/${scan.pipelineId}`;
             const res = await axios.get(url, {
                 headers: { "PRIVATE-TOKEN": GITLAB_TOKEN },
-                timeout: 5000, // [INFO] 5s Timeout for polling
+                timeout: 5000, 
             });
+
+            // 2. [NEW] Fetch Pipeline Jobs (Stages)
+            // We fetch the jobs to visualize the stepper (Build -> Test -> Scan, etc.)
+            let pipelineJobs = [];
+            try {
+                const jobsRes = await axios.get(
+                    `${GITLAB_API_URL}/projects/${GITLAB_PROJECT_ID}/pipelines/${scan.pipelineId}/jobs`,
+                    { headers: { "PRIVATE-TOKEN": GITLAB_TOKEN } }
+                );
+                // Map to simplified structure
+                pipelineJobs = jobsRes.data.map((job: any) => ({
+                    id: job.id,
+                    name: job.name,
+                    stage: job.stage,
+                    status: job.status,
+                    started_at: job.started_at,
+                    finished_at: job.finished_at,
+                    duration: job.duration
+                }));
+            } catch (jobErr) {
+                 console.warn(`[Poller] Failed to fetch jobs for ${scan.pipelineId}:`, jobErr);
+            }
             
             const glStatus = res.data.status; 
             let newStatus = "";
@@ -356,6 +424,17 @@ async function pollRunningScans() {
             else if (glStatus === "canceled") newStatus = "CANCELLED";
             else if (glStatus === "skipped") newStatus = "FAILED";
             
+            // [UPDATE] Always update pipelineJobs even if status hasn't changed
+            // This ensures the frontend stepper animates in real-time
+            if (!newStatus || newStatus === "RUNNING") {
+                 await prisma.scanHistory.update({
+                     where: { id: scan.id },
+                     data: { 
+                         pipelineJobs: pipelineJobs // Update jobs progress
+                     } as any
+                 });
+            }
+
             if (newStatus && newStatus !== "RUNNING") {
                  console.log(`[Poller] Scan ${scan.id} (Pipeline ${scan.pipelineId}) changed to ${newStatus}`);
                  
@@ -368,8 +447,10 @@ async function pollRunningScans() {
                      where: { id: scan.id },
                      data: { 
                          status: newStatus,
-                         completedAt: new Date()
-                     }
+                         completedAt: new Date(),
+                         scanLogs: appendLog(scan.scanLogs as any, newStatus, `Pipeline finished with status ${glStatus}`),
+                         pipelineJobs: pipelineJobs // Save final state of jobs
+                     } as any
                  });
             }
         } catch (error: unknown) {
@@ -385,7 +466,8 @@ async function pollRunningScans() {
                          data: { 
                              status: "CANCELLED",
                              errorMessage: reason,
-                             completedAt: new Date()
+                             completedAt: new Date(),
+                             scanLogs: appendLog(scan.scanLogs, "CANCELLED", reason)
                          }
                      });
                 } else if (status === 401 || status === 403) {

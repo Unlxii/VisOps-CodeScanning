@@ -85,3 +85,10 @@ export function isEmpty(value: any): boolean {
   if (typeof value === 'object') return Object.keys(value).length === 0;
   return false;
 }
+
+/**
+ * Merge class names (simple version without tailwind-merge)
+ */
+export function cn(...classes: (string | undefined | null | false)[]) {
+  return classes.filter(Boolean).join(" ");
+}

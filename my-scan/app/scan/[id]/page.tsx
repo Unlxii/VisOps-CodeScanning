@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import PipelineView from "@/components/PipelineView";
 import MonorepoAction from "@/components/MonorepoAction";
 import Link from "next/link";
-import { ArrowLeft, GitBranch, Hash, Shield, Package } from "lucide-react";
+import { ArrowLeft, GitBranch, Hash, Shield, Package, Timer } from "lucide-react";
+import ScanTimeline from "@/components/ScanTimeline"; // [NEW] Import
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -35,6 +36,9 @@ export default async function ScanPage(props: Props) {
         scanMode: true,
         imageTag: true,
         createdAt: true,
+        startedAt: true, // [NEW]
+        completedAt: true, // [NEW]
+        scanLogs: true, // [NEW]
         pipelineId: true, // ✅ ดึง pipelineId ออกมาใช้แสดงผล
         service: {
           select: {
@@ -113,14 +117,36 @@ export default async function ScanPage(props: Props) {
                       {scanData.imageTag}
                     </span>
                   </div>
+
+                  {/* [NEW] Duration Display */}
+                  {scanData.startedAt && (
+                    <div className="flex items-center gap-1.5 text-slate-900 dark:text-white font-medium ml-2 pl-2 border-l border-slate-300 dark:border-slate-700">
+                      <Timer size={14} className="text-slate-400" />
+                      <span className="font-mono text-xs">
+                        {(() => {
+                          const start = new Date(scanData.startedAt);
+                          const end = scanData.completedAt ? new Date(scanData.completedAt) : new Date();
+                          const diff = Math.max(0, end.getTime() - start.getTime());
+                          const mins = Math.floor(diff / 60000);
+                          const secs = Math.floor((diff % 60000) / 1000);
+                          return `${mins}m ${secs}s`;
+                        })()}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 1. Pipeline View (Graph & Table) */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <PipelineView scanId={scanData.id} scanMode={scanMode} />
+          <div className="space-y-6">
+             {/* 1. Pipeline View (Graph & Table) */}
+             <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+               <PipelineView scanId={scanData.id} scanMode={scanMode} />
+             </div>
+             
+             {/* [NEW] Scan Timeline (Now Full Width) */}
+             <ScanTimeline logs={scanData.scanLogs as any} status={scanData.status} />
           </div>
 
           {/* 2. Monorepo Action (Add more services) */}

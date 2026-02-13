@@ -106,7 +106,12 @@ export default function ActiveScanMonitor() {
         {/* Body */}
         {!isMinimized && (
           <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 bg-white">
-            {activeScans.map((scan) => (
+            {activeScans.map((scan, index) => {
+               // Simple Estimation: 2 minutes per scan ahead of this one
+               const queuePosition = index; 
+               const estWaitTimeMinutes = (queuePosition + 1) * 2;
+               
+               return (
               <Link
                 key={scan.id}
                 href={scan.pipelineId ? `/scan/${scan.pipelineId}` : "#"}
@@ -121,22 +126,33 @@ export default function ActiveScanMonitor() {
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-blue-50 flex-shrink-0 flex items-center justify-center">
-                      <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                    <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${scan.status === "RUNNING" ? "bg-blue-50" : "bg-slate-100"}`}>
+                      {scan.status === "RUNNING" ? (
+                         <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                      ) : (
+                         <span className="text-xs font-bold text-slate-500">{queuePosition + 1}</span>
+                      )}
                     </div>
                     <div className="min-w-0">
                       <p className="font-medium text-slate-800 text-sm truncate">
                         {scan.service?.serviceName || "Unknown Service"}
                       </p>
-                      <p className="text-xs text-slate-500 font-mono">
-                        {scan.status}
-                      </p>
+                      <div className="flex items-center gap-2">
+                         <p className="text-xs text-slate-500 font-mono">
+                           {scan.status}
+                         </p>
+                         {scan.status === "QUEUED" && (
+                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">
+                               ~{estWaitTimeMinutes}m wait
+                            </span>
+                         )}
+                      </div>
                     </div>
                   </div>
                   <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 transition -translate-x-2 group-hover:translate-x-0 opacity-0 group-hover:opacity-100" />
                 </div>
               </Link>
-            ))}
+            )})} 
           </div>
         )}
       </div>

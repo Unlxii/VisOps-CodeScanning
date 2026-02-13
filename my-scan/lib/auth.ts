@@ -87,10 +87,10 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user, account, trigger }) {
-      // On sign in or session update, fetch latest user data
-      if (user || trigger === "update") {
+      // always fetch latest user data to ensure permissions are up to date
+      if (token.email) {
         const dbUser = await prisma.user.findUnique({
-          where: { email: token.email! },
+          where: { email: token.email },
           select: {
             id: true,
             isSetupComplete: true,
