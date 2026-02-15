@@ -10,7 +10,9 @@ export default function LoginPage() {
 
   const handleCMULogin = async () => {
     setIsLoading(true);
-    await signIn("cmu-entraid", { callbackUrl: "/dashboard" });
+    await signIn("cmu-entraid", { callbackUrl: "/dashboard" }, {
+      redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/cmuEntraIDCallback`
+    });
   };
 
   return (
