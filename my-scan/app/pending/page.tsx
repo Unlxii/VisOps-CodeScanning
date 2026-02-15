@@ -22,8 +22,8 @@ export default function PendingPage() {
   }, [update, router]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center border border-slate-200">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-8 text-center border border-slate-200 dark:border-slate-800">
         {isRejected ? (
           // --- กรณีถูก REJECTED ---
           <>
@@ -45,10 +45,10 @@ export default function PendingPage() {
             <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Clock className="w-10 h-10 text-yellow-600 animate-pulse" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
               Account Pending
             </h1>
-            <p className="text-slate-600 mb-4">
+            <p className="text-slate-600 dark:text-slate-400 mb-4">
               Hi <span className="font-semibold">{session?.user?.name}</span>,
               your account is currently waiting for admin approval.
             </p>
