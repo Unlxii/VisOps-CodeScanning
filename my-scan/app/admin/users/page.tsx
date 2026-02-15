@@ -216,7 +216,7 @@ export default function AdminUsersPage() {
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
                           {user.image ? (
-                            <img src={user.image} alt="" className="h-full w-full object-cover" />
+                            <img src={user.image} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                           ) : (
                             <span className="text-xs font-bold text-gray-400">
                               {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "?"}

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // GET /api/admin/services/[id]/dockerfile
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   const userRole = (session?.user as any)?.role;
@@ -15,7 +15,8 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const serviceId = params.id;
+  const { id } = await params;
+  const serviceId = id;
 
   try {
     const service = await prisma.projectService.findUnique({
@@ -66,7 +67,7 @@ export async function GET(
 // POST /api/admin/services/[id]/dockerfile
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   const userRole = (session?.user as any)?.role;
@@ -76,7 +77,8 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const serviceId = params.id;
+  const { id } = await params;
+  const serviceId = id;
 
   try {
     const body = await request.json();

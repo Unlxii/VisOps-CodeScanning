@@ -463,9 +463,11 @@ async function pollRunningScans() {
             if (newStatus && newStatus !== "RUNNING") {
                  console.log(`[Poller] Scan ${scan.id} (Pipeline ${scan.pipelineId}) changed to ${newStatus}`);
                  
-                 // [NEW] Fetch Artifacts on Success
+                     // [NEW] Fetch Artifacts on Success
                  if (newStatus === "SUCCESS") {
                     await fetchReportArtifacts(scan.pipelineId);
+                    // [NEW] Update Average Duration
+                    await updateServiceAverageDuration(scan.id);
                  }
                  
                  await prisma.scanHistory.update({
@@ -512,6 +514,59 @@ async function pollRunningScans() {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("[Poller] Error:", errorMessage);
   }
+}
+
+// [NEW] Helper to calculate and update average duration
+async function updateServiceAverageDuration(scanHistoryId: string) {
+    try {
+        const currentScan = await prisma.scanHistory.findUnique({
+            where: { id: scanHistoryId },
+            select: { serviceId: true, startedAt: true }
+        });
+
+        if (!currentScan || !currentScan.startedAt) return;
+
+        // Calculate current duration in seconds
+        const durationSec = Math.round((Date.now() - new Date(currentScan.startedAt).getTime()) / 1000);
+
+        // Fetch last 5 SUCCESSFUL scans for this service to calculate rolling average
+        const lastScans = await prisma.scanHistory.findMany({
+            where: {
+                serviceId: currentScan.serviceId,
+                status: "SUCCESS",
+                startedAt: { not: null },
+                completedAt: { not: null }
+            },
+            orderBy: { createdAt: "desc" },
+            take: 5,
+            select: { startedAt: true, completedAt: true }
+        });
+
+        let totalDuration = durationSec;
+        let count = 1;
+
+        for (const scan of lastScans) {
+            if (scan.startedAt && scan.completedAt) {
+                const d = Math.round((new Date(scan.completedAt).getTime() - new Date(scan.startedAt).getTime()) / 1000);
+                if (d > 0) {
+                    totalDuration += d;
+                    count++;
+                }
+            }
+        }
+
+        const averageDuration = Math.round(totalDuration / count);
+
+        await prisma.projectService.update({
+            where: { id: currentScan.serviceId },
+            data: { averageDuration }
+        });
+
+        console.log(`[Duration] Updated Service ${currentScan.serviceId} avg duration to ${averageDuration}s (based on ${count} scans)`);
+
+    } catch (e) {
+        console.error(`[Duration] Failed to update average duration for scan ${scanHistoryId}:`, e);
+    }
 }
 
 startWorker();

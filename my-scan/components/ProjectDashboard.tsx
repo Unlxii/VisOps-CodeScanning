@@ -26,6 +26,7 @@ type Service = {
   id: string;
   serviceName: string;
   contextPath: string;
+  averageDuration?: number; // [NEW]
   repoUrl?: string;
   lastScan?: {
     id: string;
@@ -34,7 +35,7 @@ type Service = {
     imageTag: string;
     createdAt: string;
     vulnCritical: number;
-    imagePushed?: boolean; // [NEW]
+    imagePushed?: boolean;
   };
 };
 
@@ -190,8 +191,6 @@ export default function ProjectDashboard({ userEmail }: { userEmail: string }) {
     }
   };
 
-  // Use shared getStatusIcon from StatusBadge
-
   return (
     <div className="space-y-6">
       {groups.map((group) => (
@@ -294,9 +293,17 @@ export default function ProjectDashboard({ userEmail }: { userEmail: string }) {
                           </span>
                         )}
                       </h4>
-                      <p className="text-xs text-slate-400 font-mono">
-                        Path: {service.contextPath}
-                      </p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <p className="text-xs text-slate-400 font-mono">
+                            Path: {service.contextPath}
+                        </p>
+                        {/* [NEW] Show Average Duration */}
+                        <span className="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 flex items-center gap-1">
+                            ⏱️ {service.averageDuration ? 
+                                `Avg: ${Math.floor(service.averageDuration / 60)}m ${service.averageDuration % 60}s` 
+                                : "Est: Pending"}
+                        </span>
+                      </div>
                     </div>
                   </div>
 

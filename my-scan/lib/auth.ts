@@ -43,6 +43,33 @@ export const authOptions: NextAuthOptions = {
         };
       },
     }),
+    {
+      id: "cmu-entraid",
+      name: "CMU EntraID",
+      type: "oauth",
+      clientId: process.env.CMU_ENTRAID_CLIENT_ID,
+      clientSecret: process.env.CMU_ENTRAID_CLIENT_SECRET,
+      authorization: {
+        url: "https://login.microsoftonline.com/cf81f1df-de59-4c29-91da-a2dfd04aa751/oauth2/v2.0/authorize",
+        params: {
+          scope: "api://cmu/Mis.Account.Read.Me.Basicinfo offline_access",
+        },
+      },
+      token: "https://login.microsoftonline.com/cf81f1df-de59-4c29-91da-a2dfd04aa751/oauth2/v2.0/token",
+      userinfo: "https://api.cmu.ac.th/mis/cmuaccount/prod/v3/me/basicinfo",
+      profile(profile) {
+        return {
+          id: profile.cmuitaccount,
+          name: `${profile.firstname_EN} ${profile.lastname_EN}`,
+          email: profile.cmuitaccount_name,
+          image: null,
+          role: "user",
+          status: "PENDING",
+          isSetupComplete: false,
+        };
+      },
+      allowDangerousEmailAccountLinking: true,
+    },
     CredentialsProvider({
       name: "Admin Login",
       credentials: {

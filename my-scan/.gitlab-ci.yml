@@ -242,6 +242,8 @@ semgrep_scan:
   allow_failure: true
   artifacts: { paths: [semgrep-report.json], when: always }
 
+
+
 # 3. Compile (SKIP IF SCAN_ONLY)
 compile_java_maven:
   stage: compile
