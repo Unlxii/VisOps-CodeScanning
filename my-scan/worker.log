@@ -1,0 +1,7 @@
+[INFO] Loaded Trigger Token: ...638a
+[INFO] Starting VisScan Multi-Lane Worker...
+   - Target Project ID: 141
+   - Build Lane: 4 concurrent jobs
+   - Scan Lane:  6 concurrent jobs
+[INFO] Starting Status Poller...
+[Worker] Connected to RabbitMQ

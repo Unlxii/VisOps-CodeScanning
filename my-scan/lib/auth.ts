@@ -26,6 +26,8 @@ export const authOptions: NextAuthOptions = {
     updateAge: 5 * 60, // Update session every 5 minutes
   },
   providers: [
+    // Google Provider Removed per user request
+    /*
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
@@ -43,6 +45,91 @@ export const authOptions: NextAuthOptions = {
         };
       },
     }),
+    */
+    {
+      id: "cmu-entraid",
+      name: "CMU EntraID",
+      type: "oauth",
+      clientId: process.env.CMU_ENTRAID_CLIENT_ID,
+      clientSecret: process.env.CMU_ENTRAID_CLIENT_SECRET,
+      authorization: {
+        url: process.env.CMU_ENTRAID_AUTHORIZATION_URL,
+        params: {
+          scope: process.env.SCOPE,
+          redirect_uri: process.env.CMU_ENTRAID_REDIRECT_URL,
+        },
+      },
+      token: {
+        url: process.env.CMU_ENTRAID_GET_TOKEN_URL,
+        async request(context) {
+          const { provider, params, checks, client } = context;
+          const { code } = params;
+          const { code_verifier } = checks;
+
+          // Force using the custom Redirect URI
+          const redirectUri = process.env.CMU_ENTRAID_REDIRECT_URL;
+          
+          if (!redirectUri) throw new Error("Missing CMU_ENTRAID_REDIRECT_URL");
+
+          // Fix TS Error: check if token is object or string
+          const tokenUrl = typeof provider.token === "string" 
+            ? provider.token 
+            : provider.token?.url;
+
+          if (!tokenUrl) throw new Error("Missing provider token URL");
+
+          const response = await fetch(tokenUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              client_id: provider.clientId as string,
+              client_secret: provider.clientSecret as string,
+              code: code as string,
+              grant_type: "authorization_code",
+              redirect_uri: redirectUri,
+              code_verifier: code_verifier as string, // PKCE
+            }),
+          });
+          
+          if (!response.ok) {
+             const text = await response.text();
+             console.error("[CMU Auth Error]", text); // Log for debugging
+             throw new Error(text);
+          }
+
+          const tokens = await response.json();
+          
+          // Fix Error: Unknown argument `ext_expires_in`
+          // We must return only fields that match the Account model or standard OAuth fields
+          return {
+            tokens: {
+              access_token: tokens.access_token,
+              token_type: tokens.token_type,
+              id_token: tokens.id_token,
+              refresh_token: tokens.refresh_token,
+              scope: tokens.scope,
+              expires_at: tokens.expires_in ? Math.floor(Date.now() / 1000 + tokens.expires_in) : undefined,
+            },
+          };
+        }
+      },
+      userinfo: process.env.CMU_ENTRAID_GET_BASIC_INFO,
+      profile(profile) {
+        return {
+          id: profile.cmuitaccount,
+          name: `${profile.firstname_EN} ${profile.lastname_EN}`,
+          email: profile.cmuitaccount_name,
+          image: null,
+          role: "user",
+          status: "PENDING",
+          isSetupComplete: false,
+        };
+      },
+      checks: ["pkce", "state"], 
+      allowDangerousEmailAccountLinking: true,
+    },
     CredentialsProvider({
       name: "Admin Login",
       credentials: {

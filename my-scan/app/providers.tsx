@@ -70,6 +70,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     pathname === "/login" ||
     pathname === "/setup" ||
     pathname === "/pending" ||
+    pathname === "/admin/login" ||
     (pathname === "/" && status === "unauthenticated");
 
   if (status === "loading") return null;

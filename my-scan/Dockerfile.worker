@@ -1,0 +1,19 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies needed for some node modules
+RUN apk add --no-cache python3 make g++
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Compile TypeScript to JavaScript (if necessary, or run with tsx)
+# RUN npm run build
+
+CMD ["npm", "run", "worker"]

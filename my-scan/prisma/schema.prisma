@@ -111,6 +111,7 @@ model ProjectService {
   id                   String        @id @default(uuid())
   serviceName          String
   contextPath          String
+  averageDuration      Int?          // [NEW] Average scan duration in seconds
   imageName            String
   dockerUser           String?
   dockerToken          String?
