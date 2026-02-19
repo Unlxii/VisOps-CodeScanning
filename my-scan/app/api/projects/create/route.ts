@@ -3,8 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { checkDuplicateGlobally } from "@/lib/validators/serviceValidator";
-
-const MAX_SERVICES_PER_USER = 6;
+import { checkUserQuota } from "@/lib/quotaManager";
 
 export async function POST(req: Request) {
   try {
@@ -143,18 +142,13 @@ export async function POST(req: Request) {
 
     //  5. TRANSACTION START
     const result = await prisma.$transaction(async (tx) => {
-      // A. เช็ค Quota (นับเฉพาะ Active Group)
-      const currentServicesCount = await tx.projectService.count({
-        where: {
-          group: {
-            userId: user.id,
-            isActive: true,
-          },
-        },
-      });
-
-      if (currentServicesCount >= MAX_SERVICES_PER_USER) {
-        throw new Error("QUOTA_EXCEEDED");
+      // A. เช็ค Quota (per-user limit from DB)
+      const quotaCheck = await checkUserQuota(user.id);
+      if (!quotaCheck.canCreate) {
+        const err: any = new Error("QUOTA_EXCEEDED");
+        err.quotaMessage = quotaCheck.error;
+        err.maxAllowed = quotaCheck.maxAllowed;
+        throw err;
       }
 
       let targetGroupId = groupId;
@@ -247,7 +241,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error: "Quota Exceeded",
-          message: `You have reached the limit of ${MAX_SERVICES_PER_USER} services.`,
+          message: error.quotaMessage || `You have reached your service limit.`,
         },
         { status: 429 }
       );
