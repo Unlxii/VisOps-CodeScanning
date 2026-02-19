@@ -52,6 +52,7 @@ model User {
   isDockerOrganization Boolean   @default(false)
   dockerOrgName        String?
   isSetupComplete      Boolean   @default(false)
+  maxProjects          Int       @default(6)    // Per-user quota (admin-editable)
 
   credentials    Credential[]
   accounts       Account[]
