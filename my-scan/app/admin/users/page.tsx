@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Shield, 
   User as UserIcon, 
@@ -11,7 +11,10 @@ import {
   ChevronRight,
   ArrowUpDown,
   MoreVertical,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle,
+  Ban,
+  ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
 
@@ -24,6 +27,7 @@ interface User {
   status: "ACTIVE" | "PENDING" | "REJECTED";
   image: string | null;
   createdAt: string;
+  maxProjects: number;
   provider: string; 
   stats: {
     projects: number;
@@ -52,6 +56,38 @@ export default function AdminUsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [editingQuotaId, setEditingQuotaId] = useState<string | null>(null);
+  const [quotaValue, setQuotaValue] = useState<number>(6);
+
+  // Handle quota update
+  const handleQuotaUpdate = async (userId: string, newQuota: number) => {
+    try {
+      const res = await fetch("/api/admin/users/quota", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, maxProjects: newQuota }),
+      });
+      if (!res.ok) throw new Error("Failed to update quota");
+      mutate(); // Refresh user list
+      setEditingQuotaId(null);
+    } catch (err) {
+      console.error("Quota update failed:", err);
+    }
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openMenuId && !(event.target as Element).closest('.action-menu-container')) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuId]);
 
   const isLoading = !users && !error;
   
@@ -188,12 +224,12 @@ export default function AdminUsersPage() {
           <table className="w-full text-left text-sm text-gray-500 dark:text-gray-400">
             <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-800">
               <tr>
-                <SortHeader label="User" field="name" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} />
-                <SortHeader label="Role" field="role" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} />
-                <SortHeader label="Projects" field="stats.projects" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} />
-                <SortHeader label="Status" field="status" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} />
-                <SortHeader label="Joined" field="createdAt" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} />
-                <th className="px-6 py-3 font-medium text-right">Actions</th>
+                <SortHeader label="User" field="name" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[30%]" />
+                <SortHeader label="Role" field="role" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[10%]" />
+                <SortHeader label="Quota" field="stats.projects" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[10%]" />
+                <SortHeader label="Status" field="status" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[15%]" />
+                <SortHeader label="Joined" field="createdAt" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[15%]" />
+                <th className="px-6 py-3 font-medium text-right min-w-[120px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
@@ -241,7 +277,50 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                        <span className="text-gray-900 dark:text-white font-medium">{user.stats?.projects || 0}</span>
+                      {editingQuotaId === user.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={quotaValue}
+                            onChange={(e) => setQuotaValue(Number(e.target.value))}
+                            className="w-14 px-1.5 py-0.5 text-xs border border-indigo-300 dark:border-indigo-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-1 focus:ring-indigo-500 outline-none"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleQuotaUpdate(user.id, quotaValue);
+                              if (e.key === 'Escape') setEditingQuotaId(null);
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleQuotaUpdate(user.id, quotaValue)}
+                            className="text-green-600 hover:text-green-700 text-xs px-1"
+                          >✓</button>
+                          <button
+                            onClick={() => setEditingQuotaId(null)}
+                            className="text-gray-400 hover:text-gray-600 text-xs px-1"
+                          >✗</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setEditingQuotaId(user.id);
+                            setQuotaValue(user.maxProjects);
+                          }}
+                          className="group flex items-center gap-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1.5 py-0.5 -mx-1.5 transition-colors"
+                          title="Click to edit quota"
+                        >
+                          <span className={`text-sm font-medium ${
+                            (user.stats?.services || 0) >= user.maxProjects 
+                              ? 'text-red-600 dark:text-red-400' 
+                              : 'text-gray-900 dark:text-white'
+                          }`}>
+                            {user.stats?.services || 0}
+                          </span>
+                          <span className="text-xs text-gray-400">/ {user.maxProjects}</span>
+                          <span className="text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity text-xs">✎</span>
+                        </button>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <StatusBadge status={user.status} />
@@ -250,51 +329,109 @@ export default function AdminUsersPage() {
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right">
-                       <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                          
-                          <Link 
-                            href={`/admin/users/${user.id}`}
-                            className="text-xs px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-1.5 transition-colors font-medium shadow-sm"
-                          >
-                             Details
-                          </Link>
-                          
-                          {loadingAction === user.id ? (
-                            <span className="text-xs text-gray-500 animate-pulse">...</span>
-                          ) : (
-                            // Action Buttons (Promote/Ban)
-                            user.id !== session?.user.id && (
-                                <>
-                                    {user.role !== "ADMIN" && user.status !== "REJECTED" && (
-                                        <button 
-                                            onClick={() => handleAction(user.id, "PROMOTE")}
-                                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-colors"
-                                            title="Promote to Admin"
-                                        >
-                                            <Shield className="w-4 h-4" />
-                                        </button>
-                                    )}
+                            <div className="flex items-center justify-end gap-2 action-menu-container relative">
 
-                                    {user.status === "REJECTED" || user.status === "PENDING" ? (
-                                         <button 
-                                            onClick={() => handleAction(user.id, "APPROVE")}
-                                            className="text-xs px-2 py-1 rounded bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
-                                         >
-                                            Approve
-                                         </button>
-                                    ) : (
-                                        <button 
-                                            onClick={() => handleAction(user.id, "REJECT")}
-                                            className="text-xs px-2 py-1 rounded hover:bg-red-50 text-red-600 border border-transparent hover:border-red-200 transition-colors"
-                                            title="Ban User"
+                              {/* Dropdown Menu for Actions */}
+                              {user.role === 'ADMIN' || user.id === session?.user.id ? (
+                                // Invisible placeholder to keep layout balanced
+                                <div className="w-[30px] h-[30px] invisible" aria-hidden="true" />
+                              ) : (
+                                <div className="relative">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenMenuId(openMenuId === user.id ? null : user.id);
+                                    }}
+                                    className="p-1.5 rounded-md border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+                                    title="More actions"
+                                  >
+                                    <MoreVertical className="w-4 h-4" />
+                                  </button>
+
+                                  {/* Dropdown Content */}
+                                  {openMenuId === user.id && (
+                                    <div className="absolute right-0 mt-1 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 py-1.5 animate-in fade-in slide-in-from-top-1 duration-150 origin-top-right"
+                                      style={{ animation: 'fadeInScale 0.15s ease-out' }}
+                                    >
+                                      {/* PENDING ACTIONS */}
+                                      {user.status === "PENDING" && (
+                                        <>
+                                          <button
+                                            onClick={() => { handleAction(user.id, "APPROVE"); setOpenMenuId(null); }}
+                                            className="w-full text-left px-3.5 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-2.5 transition-colors"
+                                          >
+                                            <CheckCircle className="w-4 h-4" />
+                                            <div>
+                                              <div className="font-medium">Approve</div>
+                                              <div className="text-xs text-gray-400 dark:text-gray-500">Grant access to the system</div>
+                                            </div>
+                                          </button>
+                                          <div className="my-1 border-t border-gray-100 dark:border-gray-700/50" />
+                                          <button
+                                            onClick={() => { handleAction(user.id, "REJECT"); setOpenMenuId(null); }}
+                                            className="w-full text-left px-3.5 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2.5 transition-colors"
+                                          >
+                                            <Ban className="w-4 h-4" />
+                                            <div>
+                                              <div className="font-medium">Reject</div>
+                                              <div className="text-xs text-gray-400 dark:text-gray-500">Deny access request</div>
+                                            </div>
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {/* ACTIVE ACTIONS */}
+                                      {user.status === "ACTIVE" && (
+                                        <>
+                                          <button
+                                            onClick={() => { handleAction(user.id, "PROMOTE"); setOpenMenuId(null); }}
+                                            className="w-full text-left px-3.5 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center gap-2.5 transition-colors"
+                                          >
+                                            <Shield className="w-4 h-4" />
+                                            <div>
+                                              <div className="font-medium">Promote to Admin</div>
+                                              <div className="text-xs text-gray-400 dark:text-gray-500">Grant admin privileges</div>
+                                            </div>
+                                          </button>
+                                          <div className="my-1 border-t border-gray-100 dark:border-gray-700/50" />
+                                          <button
+                                            onClick={() => { handleAction(user.id, "REJECT"); setOpenMenuId(null); }}
+                                            className="w-full text-left px-3.5 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2.5 transition-colors"
+                                          >
+                                            <ShieldAlert className="w-4 h-4" />
+                                            <div>
+                                              <div className="font-medium">Ban User</div>
+                                              <div className="text-xs text-gray-400 dark:text-gray-500">Revoke system access</div>
+                                            </div>
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {/* REJECTED ACTIONS */}
+                                      {user.status === "REJECTED" && (
+                                        <button
+                                          onClick={() => { handleAction(user.id, "APPROVE"); setOpenMenuId(null); }}
+                                          className="w-full text-left px-3.5 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-2.5 transition-colors"
                                         >
-                                            Ban
+                                          <CheckCircle className="w-4 h-4" />
+                                          <div>
+                                            <div className="font-medium">Unban User</div>
+                                            <div className="text-xs text-gray-400 dark:text-gray-500">Restore system access</div>
+                                          </div>
                                         </button>
-                                    )}
-                                </>
-                            )
-                          )}
-                       </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              <Link 
+                                href={`/admin/users/${user.id}`}
+                                className="text-xs px-2.5 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 flex items-center gap-1.5 transition-all font-medium shadow-sm"
+                              >
+                                 Details
+                              </Link>
+                            </div>
                     </td>
                   </tr>
                 ))
@@ -332,10 +469,10 @@ export default function AdminUsersPage() {
   );
 }
 
-function SortHeader({ label, field, currentSort, currentDirection, onSort }: any) {
+function SortHeader({ label, field, currentSort, currentDirection, onSort, className }: any) {
     return (
         <th 
-            className="px-6 py-3 font-medium cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none"
+            className={`px-6 py-3 font-medium cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none ${className || ''}`}
             onClick={() => onSort(field)}
         >
             <div className="flex items-center gap-1">

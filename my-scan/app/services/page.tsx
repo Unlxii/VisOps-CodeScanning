@@ -44,7 +44,6 @@ interface Service {
   }>;
 }
 
-const MAX_SERVICES = 6; // Limit Quota
 
 export default function ServicesPage() {
   const router = useRouter();
@@ -52,6 +51,7 @@ export default function ServicesPage() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [maxServices, setMaxServices] = useState(6); // Will be fetched from API
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -77,6 +77,7 @@ export default function ServicesPage() {
       if (response.ok) {
         const data = await response.json();
         setServices(data.services || []);
+        if (data.maxProjects) setMaxServices(data.maxProjects);
       }
     } catch (error) {
       console.error("Failed to fetch services:", error);
@@ -133,7 +134,7 @@ export default function ServicesPage() {
     return service.scans[0];
   };
 
-  const isLimitReached = services.length >= MAX_SERVICES;
+  const isLimitReached = services.length >= maxServices;
 
   if (loading) {
     return (
@@ -204,7 +205,7 @@ export default function ServicesPage() {
               <Package size={16} />
               <div className="text-xs">
                 <span className="font-bold">{services.length}</span>
-                <span className="opacity-70"> / {MAX_SERVICES}</span>
+                <span className="opacity-70"> / {maxServices}</span>
               </div>
             </div>
 
@@ -234,6 +235,19 @@ export default function ServicesPage() {
           </div>
         </div>
       </div>
+
+      {/* Quota Full Banner */}
+      {isLimitReached && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-lg text-red-700 dark:text-red-400 text-sm">
+          <div className="flex-shrink-0 w-8 h-8 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+            <span className="text-lg">🚫</span>
+          </div>
+          <div>
+            <span className="font-semibold">Quota Full ({services.length}/{maxServices})</span>
+            <span className="ml-1 opacity-80">— Delete an existing service to create a new one.</span>
+          </div>
+        </div>
+      )}
 
       {/* Services Grid */}
       {services.length === 0 ? (
