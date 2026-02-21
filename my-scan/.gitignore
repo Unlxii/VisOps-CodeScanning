@@ -51,3 +51,8 @@ next-env.d.ts
 /prisma/migrations/*
 
 *.DS_Store
+# Custom Deployment Notes
+NOTE_*.md
+env.production.example
+worker.log
+
