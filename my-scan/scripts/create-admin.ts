@@ -26,7 +26,7 @@ async function main() {
       ---------------------------------------------------
       ✅ User found: ${email}
       👑 Promoted to ADMIN successfully.
-      🔑 Password: [UNCHANGED]
+      🔑 Password: ${password}
       ---------------------------------------------------
       `);
     } else {

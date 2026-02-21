@@ -10,6 +10,16 @@ declare module "next-auth" {
       role: string
       status: string
       isSetupComplete: boolean
+      
+      // CMU Profile Data
+      firstnameTH?: string | null
+      lastnameTH?: string | null
+      firstnameEN?: string | null
+      lastnameEN?: string | null
+      organizationCode?: string | null
+      organizationName?: string | null
+      itAccountType?: string | null
+      studentId?: string | null
     } & DefaultSession["user"]
   }
 
@@ -18,6 +28,16 @@ declare module "next-auth" {
     role: string
     status: string
     isSetupComplete: boolean
+
+    // CMU Profile Data
+    firstnameTH?: string | null
+    lastnameTH?: string | null
+    firstnameEN?: string | null
+    lastnameEN?: string | null
+    organizationCode?: string | null
+    organizationName?: string | null
+    itAccountType?: string | null
+    studentId?: string | null
   }
 }
 
@@ -28,5 +48,15 @@ declare module "next-auth/jwt" {
     status: string
     isSetupComplete: boolean
     image?: string | null
+
+    // CMU Profile Data
+    firstnameTH?: string | null
+    lastnameTH?: string | null
+    firstnameEN?: string | null
+    lastnameEN?: string | null
+    organizationCode?: string | null
+    organizationName?: string | null
+    itAccountType?: string | null
+    studentId?: string | null
   }
 }
