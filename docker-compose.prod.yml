@@ -1,0 +1,43 @@
+version: '3.8'
+services:
+  web:
+    build: 
+      context: ./my-scan
+      dockerfile: Dockerfile
+    ports:
+      - "80:3000"  # ยิงพอร์ต 80 เข้า 3000
+    env_file: .env
+    depends_on:
+      - db
+      - rabbitmq
+    restart: always
+
+  worker:
+    build: 
+      context: ./my-scan
+      dockerfile: Dockerfile.worker
+    env_file: .env
+    depends_on:
+      - db
+      - rabbitmq
+    restart: always
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: scandb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+volumes:
+  postgres_data:
