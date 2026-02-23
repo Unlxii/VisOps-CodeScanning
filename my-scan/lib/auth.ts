@@ -25,6 +25,7 @@ export const authOptions: NextAuthOptions = {
     maxAge: 15 * 60, // 15 minutes in seconds
     updateAge: 5 * 60, // Update session every 5 minutes
   },
+  debug: true,
   providers: [
     // Google Provider Removed per user request
     /*
