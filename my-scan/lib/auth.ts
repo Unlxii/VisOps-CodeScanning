@@ -53,10 +53,10 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.CMU_ENTRAID_CLIENT_ID,
       clientSecret: process.env.CMU_ENTRAID_CLIENT_SECRET,
       authorization: {
-        url: process.env.CMU_ENTRAID_AUTHORIZATION_URL,
+        url: process.env.CMU_ENTRAID_AUTHORIZATION_URL?.trim(),
         params: {
-          scope: process.env.SCOPE,
-          redirect_uri: process.env.CMU_ENTRAID_REDIRECT_URL,
+          scope: process.env.SCOPE?.trim(),
+          redirect_uri: process.env.CMU_ENTRAID_REDIRECT_URL?.trim(),
         },
       },
       token: {
@@ -67,7 +67,7 @@ export const authOptions: NextAuthOptions = {
           const { code_verifier } = checks;
 
           // Force using the custom Redirect URI
-          const redirectUri = process.env.CMU_ENTRAID_REDIRECT_URL;
+          const redirectUri = process.env.CMU_ENTRAID_REDIRECT_URL?.trim();
           
           if (!redirectUri) throw new Error("Missing CMU_ENTRAID_REDIRECT_URL");
 
