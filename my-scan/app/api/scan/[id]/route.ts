@@ -24,12 +24,13 @@ function extractAllFindings(scan: any): any[] {
       if (run.results) {
         findings = findings.concat(
           run.results.map((r: any) => ({
-            type: "Container/Dependency",
-            file: r.locations?.[0]?.physicalLocation?.artifactLocation?.uri || "Unknown",
-            line: r.locations?.[0]?.physicalLocation?.region?.startLine || 0,
-            ruleId: r.ruleId || "UNKNOWN_RULE",
+            id: r.ruleId || "UNKNOWN_RULE",
+            sourceTool: "Trivy",
+            pkgName: r.locations?.[0]?.physicalLocation?.artifactLocation?.uri || "Unknown",
+            installedVersion: String(r.locations?.[0]?.physicalLocation?.region?.startLine || "0"),
+            title: r.ruleId || "Vulnerability",
             severity: normalizeSeverity(r.level),
-            message: r.message?.text || "No description",
+            description: r.message?.text || "No description",
           }))
         );
       }
@@ -41,12 +42,13 @@ function extractAllFindings(scan: any): any[] {
   if (gitleaksInput && Array.isArray(gitleaksInput)) {
     findings = findings.concat(
       gitleaksInput.map((s: any) => ({
-        type: "Secret",
-        file: s.File || "Unknown",
-        line: s.StartLine || 0,
-        ruleId: s.RuleID || "SECRET-LEAK",
+        id: s.RuleID || "SECRET-LEAK",
+        sourceTool: "Gitleaks",
+        pkgName: s.File || "Unknown",
+        installedVersion: String(s.StartLine || "0"),
+        title: s.RuleID || "Hardcoded Secret",
         severity: "critical", // Gitleaks are always critical
-        message: s.Description || `Secret match: ${s.Match}`,
+        description: s.Description || `Secret match: ${s.Match}`,
       }))
     );
   }
@@ -56,12 +58,13 @@ function extractAllFindings(scan: any): any[] {
   if (semgrepInput?.results && Array.isArray(semgrepInput.results)) {
     findings = findings.concat(
       semgrepInput.results.map((r: any) => ({
-        type: "Code Issue",
-        file: r.path || "Unknown",
-        line: r.start?.line || 0,
-        ruleId: r.check_id || "CODE-ISSUE",
+        id: r.check_id || "CODE-ISSUE",
+        sourceTool: "Semgrep",
+        pkgName: r.path || "Unknown",
+        installedVersion: String(r.start?.line || "0"),
+        title: r.check_id || "Code Vulnerability",
         severity: normalizeSeverity(r.extra?.severity),
-        message: r.extra?.message || "Code vulnerability found",
+        description: r.extra?.message || "Code vulnerability found",
       }))
     );
   }
@@ -217,8 +220,6 @@ export async function DELETE(
 
     console.log(`[Delete] Request received for Scan ID: ${targetId}`);
 
-    // 🔥 FORCE DELETE: สั่งลบจากตาราง ScanHistory โดยตรง
-    // ไม่ต้องเช็ค ProjectGroup (เพราะนี่คือการลบ Scan ตัวเดียว)
     const result = await prisma.scanHistory.deleteMany({
       where: {
         OR: [
