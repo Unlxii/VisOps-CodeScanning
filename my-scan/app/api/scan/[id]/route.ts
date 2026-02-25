@@ -2,6 +2,85 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+
+// Normalize severity Helper for inline counts computation
+function normalizeSeverity(sev: string): string {
+  if (!sev) return "low";
+  const s = sev.toLowerCase();
+  if (s === "error" || s === "critical") return "critical";
+  if (s === "warning" || s === "high") return "high";
+  if (s === "note" || s === "info" || s === "low") return "low";
+  return s;
+}
+
+// Extraction logic identical to scan-compare.ts
+function extractAllFindings(scan: any): any[] {
+  let findings: any[] = [];
+  const details = (scan.details as any) || {};
+
+  // 1. SARIF (Trivy Standard)
+  if (scan.reportJson && (scan.reportJson as any).runs) {
+    (scan.reportJson as any).runs.forEach((run: any) => {
+      if (run.results) {
+        findings = findings.concat(
+          run.results.map((r: any) => ({
+            type: "Container/Dependency",
+            file: r.locations?.[0]?.physicalLocation?.artifactLocation?.uri || "Unknown",
+            line: r.locations?.[0]?.physicalLocation?.region?.startLine || 0,
+            ruleId: r.ruleId || "UNKNOWN_RULE",
+            severity: normalizeSeverity(r.level),
+            message: r.message?.text || "No description",
+          }))
+        );
+      }
+    });
+  }
+
+  // 2. Gitleaks (Secrets) - Handle both array formats and object payloads
+  const gitleaksInput = details.gitleaksReport || (scan.reportJson && scan.reportJson.gitleaks);
+  if (gitleaksInput && Array.isArray(gitleaksInput)) {
+    findings = findings.concat(
+      gitleaksInput.map((s: any) => ({
+        type: "Secret",
+        file: s.File || "Unknown",
+        line: s.StartLine || 0,
+        ruleId: s.RuleID || "SECRET-LEAK",
+        severity: "critical", // Gitleaks are always critical
+        message: s.Description || `Secret match: ${s.Match}`,
+      }))
+    );
+  }
+
+  // 3. Semgrep (Code Issues)
+  const semgrepInput = details.semgrepReport || (scan.reportJson && scan.reportJson.semgrep);
+  if (semgrepInput?.results && Array.isArray(semgrepInput.results)) {
+    findings = findings.concat(
+      semgrepInput.results.map((r: any) => ({
+        type: "Code Issue",
+        file: r.path || "Unknown",
+        line: r.start?.line || 0,
+        ruleId: r.check_id || "CODE-ISSUE",
+        severity: normalizeSeverity(r.extra?.severity),
+        message: r.extra?.message || "Code vulnerability found",
+      }))
+    );
+  }
+
+  // 4. Legacy Fallback
+  if (findings.length === 0 && details.findings) {
+    findings = details.findings.map((f: any) => ({
+      type: "Legacy",
+      file: f.file || f.pkgName || "Unknown",
+      line: f.line || 0,
+      ruleId: f.ruleId || f.vulnerabilityID || "UNKNOWN",
+      severity: normalizeSeverity(f.severity),
+      message: f.message || f.description || f.title || "",
+    }));
+  }
+
+  return findings;
+}
+
 // 1. GET: ดึงข้อมูล Scan สำหรับ PipelineView
 export async function GET(
   req: Request,
@@ -25,13 +104,14 @@ export async function GET(
         status: true,
         vulnCritical: true, // ค่าที่บันทึกใน DB
         details: true, // JSON ก้อนใหญ่ (เก็บ findings, logs)
+        reportJson: true, // Raw downloads by Worker Poller
         createdAt: true,
         startedAt: true, // [NEW]
         completedAt: true, // [NEW]
         scanLogs: true, // [NEW]
         pipelineJobs: true, // [NEW] Pipeline Jobs for Stepper
         scanMode: true,
-        imagePushed: true, // ✅ Add this field
+        imagePushed: true, // Add this field
         service: {
           select: {
             group: { select: { repoUrl: true } },
@@ -44,9 +124,9 @@ export async function GET(
       return NextResponse.json({ error: "Scan not found" }, { status: 404 });
     }
 
-    // --- Data Processing ---
+    // --- Data Processing (Dynamically extract ALL nested mappings) ---
     const details = (scan.details as any) || {};
-    const findings = details.findings || [];
+    const findings = extractAllFindings(scan);
     const logs = details.logs || [];
 
     // คำนวณ Counts สดๆ จาก Findings (เพื่อให้ตรงกับตารางเป๊ะๆ)
