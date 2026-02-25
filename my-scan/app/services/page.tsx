@@ -343,22 +343,22 @@ export default function ServicesPage() {
 
                   {/* Body Content - Vulnerabilities */}
                   <div className="flex-grow mb-4">
-                    {latestScan ? (
+                     {latestScan ? (
                        totalVulns > 0 ? (
                           <div className="flex gap-2">
-                             {latestScan.vulnCritical > 0 && (
+                             {Number(latestScan.vulnCritical) > 0 && (
                                 <div className="flex-1 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-lg p-2 text-center">
                                    <div className="text-lg font-bold text-red-600 dark:text-red-400 leading-none">{latestScan.vulnCritical}</div>
                                    <div className="text-[9px] font-bold text-red-400 uppercase tracking-wider mt-1">Crit</div>
                                 </div>
                              )}
-                             {latestScan.vulnHigh > 0 && (
+                             {Number(latestScan.vulnHigh) > 0 && (
                                 <div className="flex-1 bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/50 rounded-lg p-2 text-center">
                                    <div className="text-lg font-bold text-orange-600 dark:text-orange-400 leading-none">{latestScan.vulnHigh}</div>
                                    <div className="text-[9px] font-bold text-orange-400 uppercase tracking-wider mt-1">High</div>
                                 </div>
                              )}
-                             {(latestScan.vulnCritical === 0 && latestScan.vulnHigh === 0) && (
+                             {(Number(latestScan.vulnCritical) === 0 && Number(latestScan.vulnHigh) === 0) && (
                                  <div className="flex-1 grid grid-cols-2 gap-2">
                                     <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-100 dark:border-yellow-900/30 rounded-lg p-2 text-center">
                                        <div className="text-md font-bold text-yellow-600 dark:text-yellow-400">{latestScan.vulnMedium}</div>
