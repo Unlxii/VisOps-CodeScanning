@@ -57,7 +57,7 @@ export const authOptions: NextAuthOptions = {
         url: process.env.CMU_ENTRAID_AUTHORIZATION_URL?.trim(),
         params: {
           scope: process.env.SCOPE?.trim(),
-          redirect_uri: process.env.CMU_ENTRAID_REDIRECT_URL?.trim() || "https://visscan.cpe.eng.cmu.ac.th/cmuEntraIDCallback",
+          redirect_uri: "https://visscan.cpe.eng.cmu.ac.th/cmuEntraIDCallback",
         },
       },
       token: {
@@ -68,7 +68,7 @@ export const authOptions: NextAuthOptions = {
           const { code_verifier } = checks;
 
           // Force using the custom Redirect URI
-          const redirectUri = process.env.CMU_ENTRAID_REDIRECT_URL?.trim() || "https://visscan.cpe.eng.cmu.ac.th/cmuEntraIDCallback";
+          const redirectUri = "https://visscan.cpe.eng.cmu.ac.th/cmuEntraIDCallback";
           
           if (!redirectUri) throw new Error("Missing CMU_ENTRAID_REDIRECT_URL");
 
