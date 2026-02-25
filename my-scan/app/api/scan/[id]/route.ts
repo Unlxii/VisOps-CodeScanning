@@ -49,6 +49,9 @@ function extractAllFindings(scan: any): any[] {
         title: s.RuleID || "Hardcoded Secret",
         severity: "critical", // Gitleaks are always critical
         description: s.Description || `Secret match: ${s.Match}`,
+        author: s.Author, // Inject committer name
+        email: s.Email,   // Inject committer email
+        commit: s.Commit, // Inject commit hash
       }))
     );
   }
@@ -140,7 +143,6 @@ export async function GET(
       low: findings.filter((f: any) => f.severity === "low").length,
     };
 
-    // คำนวณ Progress Bar แบบคร่าวๆ
     let progress = 0;
     let step = "Initializing...";
 
