@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     const findings1 = extractAllFindings(scan1);
     const findings2 = extractAllFindings(scan2);
 
-    const createKey = (f: any) => `${f.file}:${f.line}:${f.ruleId}`;
+    const createKey = (f: any) => `${f.pkgName}:${f.installedVersion}:${f.id}`;
     const map1 = new Map(findings1.map((f) => [createKey(f), f]));
     const map2 = new Map(findings2.map((f) => [createKey(f), f]));
 
@@ -73,37 +73,85 @@ function formatScanSummary(scan: any) {
   };
 }
 
+function normalizeSeverity(sev: string): string {
+  if (!sev) return "low";
+  const s = sev.toLowerCase();
+  if (s === "error" || s === "critical") return "critical";
+  if (s === "warning" || s === "high") return "high";
+  if (s === "note" || s === "info" || s === "low") return "low";
+  return s;
+}
+
 function extractAllFindings(scan: any): any[] {
   let findings: any[] = [];
   const details = (scan.details as any) || {};
 
-  // 1. SARIF (Trivy)
+  // 1. SARIF (Trivy Standard)
   if (scan.reportJson && (scan.reportJson as any).runs) {
     (scan.reportJson as any).runs.forEach((run: any) => {
       if (run.results) {
         findings = findings.concat(
           run.results.map((r: any) => ({
-            file:
-              r.locations?.[0]?.physicalLocation?.artifactLocation?.uri ||
-              "Unknown",
-            line: r.locations?.[0]?.physicalLocation?.region?.startLine || 0,
-            ruleId: r.ruleId || "UNKNOWN",
-            severity: r.level?.toUpperCase() || "LOW",
-            message: r.message?.text || "",
+            id: r.ruleId || "UNKNOWN_RULE",
+            sourceTool: "Trivy",
+            pkgName: r.locations?.[0]?.physicalLocation?.artifactLocation?.uri || "Unknown",
+            installedVersion: String(r.locations?.[0]?.physicalLocation?.region?.startLine || "0"),
+            title: r.ruleId || "Vulnerability",
+            severity: normalizeSeverity(r.level),
+            description: r.message?.text || "No description",
           }))
         );
       }
     });
   }
-  // 2. Fallback Legacy
+
+  // 2. Gitleaks (Secrets) - Handle both array formats and object payloads
+  const gitleaksInput = details.gitleaksReport || (scan.reportJson && scan.reportJson.gitleaks);
+  if (gitleaksInput && Array.isArray(gitleaksInput)) {
+    findings = findings.concat(
+      gitleaksInput.map((s: any) => ({
+        id: s.RuleID || "SECRET-LEAK",
+        sourceTool: "Gitleaks",
+        pkgName: s.File || "Unknown",
+        installedVersion: String(s.StartLine || "0"),
+        title: s.RuleID || "Hardcoded Secret",
+        severity: "critical", // Gitleaks are always critical
+        description: s.Description || `Secret match: ${s.Match}`,
+        author: s.Author, // Inject committer name
+        email: s.Email,   // Inject committer email
+        commit: s.Commit, // Inject commit hash
+      }))
+    );
+  }
+
+  // 3. Semgrep (Code Issues)
+  const semgrepInput = details.semgrepReport || (scan.reportJson && scan.reportJson.semgrep);
+  if (semgrepInput?.results && Array.isArray(semgrepInput.results)) {
+    findings = findings.concat(
+      semgrepInput.results.map((r: any) => ({
+        id: r.check_id || "CODE-ISSUE",
+        sourceTool: "Semgrep",
+        pkgName: r.path || "Unknown",
+        installedVersion: String(r.start?.line || "0"),
+        title: r.check_id || "Code Vulnerability",
+        severity: normalizeSeverity(r.extra?.severity),
+        description: r.extra?.message || "Code vulnerability found",
+      }))
+    );
+  }
+
+  // 4. Legacy Fallback
   if (findings.length === 0 && details.findings) {
     findings = details.findings.map((f: any) => ({
-      file: f.file || f.pkgName,
-      line: f.line || 0,
-      ruleId: f.ruleId || f.vulnerabilityID,
-      severity: f.severity?.toUpperCase() || "LOW",
-      message: f.message || f.description || f.title,
+      id: f.ruleId || f.vulnerabilityID || "UNKNOWN",
+      sourceTool: f.type || "Legacy",
+      pkgName: f.file || f.pkgName || "Unknown",
+      installedVersion: String(f.line || "0"),
+      title: f.ruleId || f.vulnerabilityID || "UNKNOWN",
+      severity: normalizeSeverity(f.severity),
+      description: f.message || f.description || f.title || "",
     }));
   }
+
   return findings;
 }
