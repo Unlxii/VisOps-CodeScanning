@@ -54,10 +54,9 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.CMU_ENTRAID_CLIENT_ID,
       clientSecret: process.env.CMU_ENTRAID_CLIENT_SECRET,
       authorization: {
-        url: process.env.CMU_ENTRAID_AUTHORIZATION_URL?.trim(),
+        url: `${process.env.NEXTAUTH_URL?.trim() || "https://visscan.cpe.eng.cmu.ac.th"}/api/auth/cmu-proxy`,
         params: {
           scope: process.env.SCOPE?.trim(),
-          redirect_uri: "https://visscan.cpe.eng.cmu.ac.th/cmuEntraIDCallback",
         },
       },
       token: {
