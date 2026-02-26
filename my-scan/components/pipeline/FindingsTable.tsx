@@ -38,22 +38,22 @@ export const FindingsTable = ({
   }, [filter]);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full min-h-[500px]">
-      <div className="p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
+    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 flex flex-col h-full min-h-[500px]">
+      <div className="p-4 border-b border-gray-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Search className="w-4 h-4 text-gray-500" />
-          <h3 className="font-semibold text-gray-800">
+          <Search className="w-4 h-4 text-gray-500 dark:text-slate-400" />
+          <h3 className="font-semibold text-gray-800 dark:text-white">
             Findings ({filteredFindings.length})
           </h3>
         </div>
-        <div className="flex bg-gray-100 p-1 rounded-lg">
+        <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-lg">
           {(["all", "critical", "high", "medium", "low"] as const).map(
             (lvl) => (
               <button
                 key={lvl}
                 onClick={() => setFilter(lvl)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${
-                  filter === lvl ? "bg-white shadow-sm" : "text-gray-500"
+                  filter === lvl ? "bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-slate-400"
                 }`}
               >
                 {lvl}
@@ -73,30 +73,30 @@ export const FindingsTable = ({
                         <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-75"></div>
                         <Search className="w-12 h-12 text-blue-500 relative z-10" />
                     </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Scanning in progress...</h4>
-                    <p className="text-sm text-gray-500 max-w-xs mx-auto">
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Scanning in progress...</h4>
+                    <p className="text-sm text-gray-500 dark:text-slate-400 max-w-xs mx-auto">
                         We are analyzing your codebase for vulnerabilities. New findings will appear here.
                     </p>
                 </>
             ) : isSuccess && totalFindings === 0 ? (
                 // Clean State
                 <>
-                    <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4">
+                    <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/20 rounded-full flex items-center justify-center mb-4">
                         <ShieldAlert className="w-8 h-8 text-emerald-500" />
                     </div>
-                    <h4 className="text-lg font-bold text-gray-900 mb-1">Excellent! No Vulnerabilities</h4>
-                    <p className="text-sm text-gray-500 max-w-xs mx-auto">
+                    <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Excellent! No Vulnerabilities</h4>
+                    <p className="text-sm text-gray-500 dark:text-slate-400 max-w-xs mx-auto">
                         Your code passed all security checks. No issues were found in this scan.
                     </p>
                 </>
             ) : (
                 // Empty Filter State
                 <>
-                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                        <Search className="w-8 h-8 text-gray-400" />
+                    <div className="w-16 h-16 bg-gray-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                        <Search className="w-8 h-8 text-gray-400 dark:text-slate-500" />
                     </div>
-                    <h4 className="text-base font-medium text-gray-900 mb-1">No findings match your filter</h4>
-                    <p className="text-sm text-gray-500">
+                    <h4 className="text-base font-medium text-gray-900 dark:text-white mb-1">No findings match your filter</h4>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">
                         Try adjusting your search criteria or viewing all findings.
                     </p>
                 </>
@@ -104,28 +104,28 @@ export const FindingsTable = ({
           </div>
         ) : (
           <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-50/50 sticky top-0 z-10 backdrop-blur-sm border-b border-gray-100">
+            <thead className="bg-gray-50/50 dark:bg-slate-800/50 sticky top-0 z-10 backdrop-blur-sm border-b border-gray-100 dark:border-slate-800">
               <tr>
-                <th className="p-4 pl-6 text-xs font-semibold text-gray-500 uppercase w-28 tracking-wider">
+                <th className="p-4 pl-6 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase w-28 tracking-wider">
                   Severity
                 </th>
-                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="p-4 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   Issue / Tool
                 </th>
-                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="p-4 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   Location / Context
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
               {paginatedFindings.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/80 transition-colors group">
+                <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors group">
                   <td className="p-4 pl-6 align-top">
                     <SeverityBadge severity={item.severity} />
                   </td>
                   <td className="p-4 align-top">
                     <div className="flex flex-col gap-1.5">
-                      <div className="font-medium text-slate-900 line-clamp-2 leading-relaxed" title={item.title || item.pkgName}>
+                      <div className="font-medium text-slate-900 dark:text-white line-clamp-2 leading-relaxed" title={item.title || item.pkgName}>
                         {item.title || item.pkgName}
                       </div>
                       <div className="flex items-center gap-2">
@@ -133,8 +133,8 @@ export const FindingsTable = ({
                       </div>
                     </div>
                   </td>
-                  <td className="p-4 align-top text-sm font-mono text-slate-600">
-                    <div className="break-all mb-2 font-medium bg-slate-50 px-2 py-1 rounded w-fit text-xs border border-slate-200">
+                  <td className="p-4 align-top text-sm font-mono text-slate-600 dark:text-slate-400">
+                    <div className="break-all mb-2 font-medium bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded w-fit text-xs border border-slate-200 dark:border-slate-700">
                        {item.pkgName}
                     </div>
                     {item.sourceTool === "Gitleaks" &&
@@ -167,18 +167,18 @@ export const FindingsTable = ({
 
       {/* Pagination */}
       {filteredFindings.length > ITEMS_PER_PAGE && (
-        <div className="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-gray-50">
-          <div className="text-xs text-gray-600 order-2 sm:order-1">
+        <div className="px-4 py-3 border-t border-gray-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-gray-50 dark:bg-slate-800/50">
+          <div className="text-xs text-gray-600 dark:text-slate-400 order-2 sm:order-1">
             Showing{" "}
-            <span className="font-semibold text-gray-900">
+            <span className="font-semibold text-gray-900 dark:text-white">
               {(currentPage - 1) * ITEMS_PER_PAGE + 1}
             </span>{" "}
             to{" "}
-            <span className="font-semibold text-gray-900">
+            <span className="font-semibold text-gray-900 dark:text-white">
               {Math.min(currentPage * ITEMS_PER_PAGE, filteredFindings.length)}
             </span>{" "}
             of{" "}
-            <span className="font-semibold text-gray-900">
+            <span className="font-semibold text-gray-900 dark:text-white">
               {filteredFindings.length}
             </span>{" "}
             results

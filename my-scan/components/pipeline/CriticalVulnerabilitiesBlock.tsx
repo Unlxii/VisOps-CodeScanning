@@ -20,16 +20,16 @@ export const CriticalVulnerabilitiesBlock = ({
   if (!vulnerabilities || vulnerabilities.length === 0) return null;
 
   return (
-    <div className="bg-red-50 rounded-xl shadow-sm border border-red-200 p-6 animate-in fade-in slide-in-from-bottom-2">
+    <div className="bg-red-50 dark:bg-red-900/10 rounded-xl shadow-sm border border-red-200 dark:border-red-800/30 p-6 animate-in fade-in slide-in-from-bottom-2">
       <div className="flex items-start gap-3 mb-5">
-        <div className="p-2 bg-red-100 rounded-lg shrink-0">
-             <ShieldAlert className="w-6 h-6 text-red-600" />
+        <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg shrink-0">
+             <ShieldAlert className="w-6 h-6 text-red-600 dark:text-red-400" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-red-900 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-red-900 dark:text-red-300 flex items-center gap-2">
             Release Blocked by Security
           </h2>
-          <p className="text-sm text-red-800/80 mt-1 max-w-3xl">
+          <p className="text-sm text-red-800/80 dark:text-red-400/80 mt-1 max-w-3xl">
             We found {vulnerabilities.length} <strong>CRITICAL</strong> vulnerabilities that pose a significant risk. 
             The pipeline has been halted to prevent deploying insecure code.
           </p>
@@ -40,7 +40,7 @@ export const CriticalVulnerabilitiesBlock = ({
         {vulnerabilities.slice(0, 20).map((vuln, idx) => (
           <div
             key={idx}
-            className="bg-white rounded-lg border border-red-100 p-4 shadow-sm hover:shadow-md transition-shadow"
+            className="bg-white dark:bg-slate-800 rounded-lg border border-red-100 dark:border-red-800/30 p-4 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex-1">
@@ -52,14 +52,14 @@ export const CriticalVulnerabilitiesBlock = ({
                     {vuln.id}
                   </span>
                 </div>
-                <h3 className="font-semibold text-slate-900">{vuln.title}</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-white">{vuln.title}</h3>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100">
+            <div className="grid grid-cols-3 gap-3 text-sm bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
               <div>
                 <div className="text-[10px] uppercase font-semibold text-slate-400 mb-0.5">Package</div>
-                <div className="font-mono font-medium text-slate-800 break-all">
+                <div className="font-mono font-medium text-slate-800 dark:text-slate-200 break-all">
                   {vuln.pkgName}
                 </div>
               </div>
