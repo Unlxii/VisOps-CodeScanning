@@ -119,16 +119,16 @@ export default function SetupWizard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg p-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center p-4">
+      <div className="max-w-2xl w-full bg-white dark:bg-slate-900 rounded-lg shadow-lg dark:shadow-slate-900/50 p-8 border border-transparent dark:border-slate-800">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-3">
-            <ShieldCheck className="w-8 h-8 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900">
+            <ShieldCheck className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               Setup Your Account
             </h1>
           </div>
-          <p className="text-gray-600 text-sm">
+          <p className="text-gray-600 dark:text-slate-400 text-sm">
             Connect your GitHub and Docker Hub credentials
           </p>
         </div>
@@ -138,14 +138,14 @@ export default function SetupWizard() {
           <div className="flex items-center gap-4">
             <div
               className={`flex items-center gap-2 ${
-                step >= 1 ? "text-blue-600" : "text-gray-400"
+                step >= 1 ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-slate-500"
               }`}
             >
               <div
                 className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-semibold text-sm ${
                   step >= 1
                     ? "bg-blue-600 text-white border-blue-600"
-                    : "border-gray-300"
+                    : "border-gray-300 dark:border-slate-600"
                 }`}
               >
                 1
@@ -154,19 +154,19 @@ export default function SetupWizard() {
             </div>
             <div
               className={`h-0.5 w-12 ${
-                step >= 2 ? "bg-blue-600" : "bg-gray-300"
+                step >= 2 ? "bg-blue-600" : "bg-gray-300 dark:bg-slate-600"
               }`}
             ></div>
             <div
               className={`flex items-center gap-2 ${
-                step >= 2 ? "text-blue-600" : "text-gray-400"
+                step >= 2 ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-slate-500"
               }`}
             >
               <div
                 className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-semibold text-sm ${
                   step >= 2
                     ? "bg-blue-600 text-white border-blue-600"
-                    : "border-gray-300"
+                    : "border-gray-300 dark:border-slate-600"
                 }`}
               >
                 2
@@ -177,7 +177,7 @@ export default function SetupWizard() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-lg text-red-700 dark:text-red-400">
             {error}
           </div>
         )}
@@ -186,7 +186,7 @@ export default function SetupWizard() {
         {step === 1 && (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                 GitHub Personal Access Token (PAT)
               </label>
               <input
@@ -195,7 +195,7 @@ export default function SetupWizard() {
                 onChange={(e) =>
                   setFormData({ ...formData, githubPAT: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-600 outline-none"
                 placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
               />
               {validation.github.message && (
@@ -212,14 +212,14 @@ export default function SetupWizard() {
                   {validation.github.message}
                 </div>
               )}
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-slate-500">
                 Required scopes:{" "}
-                <code className="bg-gray-100 px-1 rounded">repo</code>
+                <code className="bg-gray-100 dark:bg-slate-800 px-1 rounded text-gray-700 dark:text-slate-300">repo</code>
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                 GitHub Username
               </label>
               <input
@@ -228,16 +228,16 @@ export default function SetupWizard() {
                 onChange={(e) =>
                   setFormData({ ...formData, githubUsername: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-600 outline-none"
                 placeholder="your-github-username"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-slate-500">
                 Your GitHub account username
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                 Docker Hub Username
               </label>
               <input
@@ -246,13 +246,13 @@ export default function SetupWizard() {
                 onChange={(e) =>
                   setFormData({ ...formData, dockerUsername: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-600 outline-none"
                 placeholder="your-dockerhub-username"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                 Docker Hub Token or Password
               </label>
               <input
@@ -261,7 +261,7 @@ export default function SetupWizard() {
                 onChange={(e) =>
                   setFormData({ ...formData, dockerToken: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-slate-600 outline-none"
                 placeholder="dckr_pat_xxxxxxxxxxxxxxxxxxxx"
               />
               {validation.docker.message && (
@@ -288,7 +288,7 @@ export default function SetupWizard() {
                 !formData.dockerUsername ||
                 !formData.dockerToken
               }
-              className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-slate-700 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? "Validating..." : "Validate & Continue"}
@@ -299,29 +299,29 @@ export default function SetupWizard() {
         {/* Step 2: Confirmation */}
         {step === 2 && (
           <div className="space-y-6">
-            <div className="p-6 bg-green-50 border border-green-200 rounded-lg">
+            <div className="p-6 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30 rounded-lg">
               <div className="flex items-center gap-2 mb-3">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <h3 className="text-lg font-semibold text-green-900">
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <h3 className="text-lg font-semibold text-green-900 dark:text-green-300">
                   Tokens Validated Successfully
                 </h3>
               </div>
-              <div className="space-y-1 text-sm text-green-700">
+              <div className="space-y-1 text-sm text-green-700 dark:text-green-400">
                 <p>{validation.github.message}</p>
                 <p>{validation.docker.message}</p>
               </div>
             </div>
 
-            <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="p-6 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-lg">
               <div className="flex items-center gap-2 mb-3">
-                <ShieldCheck className="w-5 h-5 text-blue-600" />
-                <h3 className="text-base font-semibold text-blue-900">
+                <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-base font-semibold text-blue-900 dark:text-blue-300">
                   Security Notes
                 </h3>
               </div>
-              <ul className="list-disc list-inside space-y-1 text-sm text-blue-700">
+              <ul className="list-disc list-inside space-y-1 text-sm text-blue-700 dark:text-blue-400">
                 <li>Tokens encrypted with AES-256</li>
-                <li>Maximum 6 active projects per account</li>
+                <li>Per-user quota managed by admin</li>
                 <li>Isolated sandboxed build environments</li>
                 <li>Critical vulnerabilities block deployment</li>
               </ul>
@@ -330,14 +330,14 @@ export default function SetupWizard() {
             <div className="flex gap-4">
               <button
                 onClick={() => setStep(1)}
-                className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
+                className="flex-1 py-3 bg-gray-200 dark:bg-slate-800 text-gray-700 dark:text-slate-300 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-slate-700 transition"
               >
                 Back
               </button>
               <button
                 onClick={handleComplete}
                 disabled={loading}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-slate-700 transition flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {loading ? "Completing..." : "Complete Setup"}

@@ -217,7 +217,7 @@ export default function PipelineView(props: {
     return (
       <div className="flex flex-col items-center justify-center p-12 min-h-[50vh]">
         <Loader2 className="w-10 h-10 animate-spin text-blue-600 mb-4" />
-        <h3 className="text-lg font-medium text-gray-700">
+        <h3 className="text-lg font-medium text-gray-700 dark:text-slate-300">
           Connecting to Pipeline...
         </h3>
       </div>
@@ -226,17 +226,17 @@ export default function PipelineView(props: {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 m-6">
+      <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-lg p-6 m-6">
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="text-lg font-semibold text-red-900 mb-1">
+            <h3 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-1">
               Pipeline Not Found
             </h3>
-            <p className="text-red-700 mb-3">{error}</p>
+            <p className="text-red-700 dark:text-red-400 mb-3">{error}</p>
             <button
               onClick={() => router.push("/dashboard")}
-              className="text-sm font-medium text-red-700 hover:text-red-900 underline"
+              className="text-sm font-medium text-red-700 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 underline"
             >
               Return to Dashboard
             </button>
@@ -294,7 +294,7 @@ export default function PipelineView(props: {
           <button
             onClick={handleCancelScan}
             disabled={isCancelling}
-            className="px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition text-sm font-medium shadow-sm"
+            className="px-4 py-2 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition text-sm font-medium shadow-sm"
           >
             {isCancelling ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -307,14 +307,14 @@ export default function PipelineView(props: {
       </div>
 
       {showCompareButton && (
-        <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-6 shadow-sm flex items-center justify-between">
+        <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border border-orange-200 dark:border-orange-800/30 rounded-xl p-6 shadow-sm flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-white rounded-full shadow-sm">
-              <GitCompare className="w-6 h-6 text-orange-600" />
+            <div className="p-3 bg-white dark:bg-slate-800 rounded-full shadow-sm">
+              <GitCompare className="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900">Scan Complete</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="font-bold text-gray-900 dark:text-white">Scan Complete</h3>
+              <p className="text-gray-600 dark:text-slate-400 text-sm">
                 Compare with previous results available
               </p>
             </div>
