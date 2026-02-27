@@ -16,8 +16,10 @@
    ```
 2. Clone โปรเจกต์ลงมา:
    ```bash
-   git clone <your-repo-url> viscan-app
+   git clone -b <branch-name> <your-repo-url> viscan-app
    cd viscan-app
+   # หรือถ้า clone มาแล้ว อยากเปลี่ยน branch:
+   # git checkout <branch-name>
    ```
 
 ### วิธีที่ 2: ก๊อปปี้ไฟล์ตรงๆ (SCP)
@@ -68,21 +70,30 @@ nano .env
 ```
 วางค่าตามตัวอย่าง:
 ```env
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/scandb"
+NEXT_PUBLIC_BASE_URL=https://viscan.cpe.eng.cmu.ac.th
 
-# NextAuth
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/scandb?schema=public"
+
+# GitLab Config
+GITLAB_PROJECT_ID=141
+GITLAB_TOKEN="<glpat-token>" 
+GITLAB_API_URL="http://10.10.184.118:8929/api/v4"
+GITLAB_TRIGGER_TOKEN="<glptt-token>"
+TEMPLATE_API_KEY="secret-key-for-internal-use"
+ENCRYPTION_KEY="<32-chars-key>"
+
+# CMU EntraID Auth (Standardized)
+
+CMU_ENTRAID_REDIRECT_URL="https://viscan.cpe.eng.cmu.ac.th/cmuEntraIDCallback"
+CMU_ENTRAID_AUTHORIZATION_URL="https://login.microsoftonline.com/cf81f1df-de59-4c29-91da-a2dfd04aa751/oauth2/v2.0/authorize"
+CMU_ENTRAID_GET_TOKEN_URL="https://login.microsoftonline.com/cf81f1df-de59-4c29-91da-a2dfd04aa751/oauth2/v2.0/token"
+CMU_ENTRAID_GET_BASIC_INFO="https://api.cmu.ac.th/mis/cmuaccount/prod/v3/me/basicinfo"
+SCOPE="api://cmu/Mis.Account.Read.Me.Basicinfo offline_access"
+
+# IMPORTANT: ต้องใช้ Domain เท่านั้น (IP ใช้ไม่ได้ เพราะ CMU ไม่อนุญาต)
 NEXTAUTH_URL="https://viscan.cpe.eng.cmu.ac.th"
 NEXTAUTH_SECRET="<generate-random-secret>"
-
-# CMU EntraID
-CMU_ENTRAID_CLIENT_ID="<client-id>"
-CMU_ENTRAID_CLIENT_SECRET="<client-secret>"
-
-# GitLab Integration
-GITLAB_API_URL="http://10.10.184.118:8929/api/v4"
-GITLAB_TRIGGER_TOKEN="<token>"
-GITLAB_PROJECT_ID="141"
 
 # RabbitMQ
 RABBITMQ_URL="amqp://localhost:5672"
@@ -150,5 +161,68 @@ sudo ufw allow 15672/tcp
 ```
 
 ## 3. การตรวจสอบ (Verify)
-- **VisScan**: `http://viscan.cpe.eng.cmu.ac.th` (ต้อง map DNS หรือ hosts file ที่เครื่องเราไปที่ 10.10.184.118)
 - **GitLab**: `http://10.10.184.118:8929`
+
+---
+
+---
+
+## 3. การแก้ปัญหา "Job Stuck" (Troubleshooting)
+
+หากเคยใช้งานได้ปกติ แต่ตอนนี้ **Pipeline ค้าง (Stuck)**:
+
+### 3.1 ตรวจสอบ Runner เดิมก่อน (Check Existing Runner)
+ลอง SSH เข้าไปที่ VM แล้วเช็คว่า container ของ runner ยังทำงานอยู่ไหม:
+
+```bash
+# 1. ดู Container ที่รันอยู่
+docker ps | grep gitlab-runner
+
+# 2. ถ้าไม่เจอ ให้ลองดู Container ทั้งหมด (รวมที่หยุดไปแล้ว)
+docker ps -a | grep gitlab-runner
+
+# 3. ถ้าเจอแต่ State เป็น Exited ให้ลอง Start ใหม่
+docker start gitlab-runner
+```
+
+ถ้า **ไม่เจอ Runner เลย** หรือ **Start แล้วยังไม่ได้ผล** ให้ทำตามขั้นตอนการติดตั้งใหม่ด้านล่าง (3.2)
+
+---
+
+### 3.2 ติดตั้ง Runner ใหม่ (Setup New Runner)
+หากไม่มี Runner หรือกู้คืนไม่ได้ ให้สร้างใหม่ตามขั้นตอนนี้:
+
+1.  **ไปที่ GitLab Web Interface**:
+    - Project -> Settings -> CI/CD -> Runners
+    - ก๊อปปี้ **Registration Token** เก็บไว้
+
+2.  **อัปเดตไฟล์บน VM (สำคัญ!)**:
+    - เนื่องจากไฟล์ `docker-compose.runner.yml` และ `scripts/register-runner.sh` เพิ่งสร้างใหม่ในเครื่องคุณ
+    - ต้องอัปโหลดไฟล์เหล่านี้ไปที่ VM ก่อน:
+    ```bash
+    # รันคำสั่งนี้บนเครื่อง Mac ของคุณ (เปลี่ยน <username> เป็นชื่อ user บน VM)
+    rsync -avz ./docker-compose.runner.yml ./scripts <username>@10.10.184.118:~/viscan-app/
+    ```
+
+3.  **รันคำสั่งลงทะเบียน Runner (บน VM)**:
+    - SSH เข้าไปที่ VM: `ssh <username>@10.10.184.118`
+    - เข้าไปที่โฟลเดอร์โปรเจกต์: `cd ~/viscan-app`
+    ```bash
+    # ให้สิทธิ์ execute ไฟล์
+    chmod +x scripts/register-runner.sh
+    
+    # รันสคริปต์
+    ./scripts/register-runner.sh
+    ```
+    - เมื่อถาม **GitLab URL**: ให้ใช้ค่า default (`http://10.10.184.118:8929`) หรือกด Enter
+    - เมื่อถาม **Token**: ให้วาง Token ที่ได้จากข้อ 1
+
+4.  **รัน Service Runner**:
+    ```bash
+    docker-compose -f docker-compose.runner.yml up -d
+    ```
+
+5.  **ตรวจสอบสถานะ**:
+    - กลับไปหน้า Settings -> CI/CD -> Runners ใน GitLab
+    - จะต้องเห็นจุดสีเขียว (🟢 Online)
+    - ไปที่ Pipeline ที่ค้างอยู่ กด **Cancel** แล้ว **Run Pipeline** ใหม่

@@ -12,12 +12,12 @@
 **ไฟล์**: `app/page.tsx`
 
 **เปลี่ยนจาก**: หน้าเลือก Scan & Build / Scan Only  
-**เป็น**: Landing Page พร้อมปุ่ม "Login with Google"
+**เป็น**: Landing Page พร้อมปุ่ม "Sign in with CMU Account"
 
 **Features**:
 
 - ✅ Hero section พร้อมโลโก้และ tagline
-- ✅ ปุ่ม Login with Google ขนาดใหญ่
+- ✅ ปุ่ม Login with CMU Account ขนาดใหญ่
 - ✅ แสดง features (Security Scanning, Container Scanning, History)
 - ✅ Auto redirect ไป /dashboard ถ้า login + setup แล้ว
 - ✅ Auto redirect ไป /setup ถ้า login แต่ยัง setup ไม่เสร็จ
@@ -117,11 +117,11 @@ const fetchActiveScans = async () => {
 
 ```
 1. User เข้า "/" (Home Page)
-   └─ ยังไม่ login → แสดง Landing Page พร้อมปุ่ม "Login with Google" ✅
+   └─ ยังไม่ login → แสดง Landing Page พร้อมปุ่ม "Sign in with CMU Account" ✅
 
-2. Click "Login with Google"
+2. Click "Sign in with CMU Account"
    └─ Redirect ไป /login ✅
-   └─ Google OAuth ✅
+   └─ CMU EntraID OAuth (Dynamic Redirect URI) ✅
 
 3. Login สำเร็จ
    ├─ isSetupComplete = false → Redirect to /setup ✅
