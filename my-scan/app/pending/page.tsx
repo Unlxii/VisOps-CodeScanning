@@ -66,8 +66,10 @@ export default function PendingPage() {
             <Mail size={16} /> Contact Support
           </a>
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 dark:bg-slate-800 text-white rounded-xl hover:bg-slate-800 dark:hover:bg-slate-700 transition-all font-medium text-sm"
+            onClick={() => signOut({ 
+               callbackUrl: process.env.NEXT_PUBLIC_CMU_ENTRAID_LOGOUT_URL || "/login" 
+            })}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-medium text-sm"
           >
             <LogOut size={16} /> Logout
           </button>

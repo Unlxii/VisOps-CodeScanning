@@ -4,10 +4,11 @@ import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { 
   User, Mail, Calendar, Shield, Activity, 
-  GitBranch, Server, Box, AlertTriangle, CheckCircle, XCircle, Clock
+  GitBranch, Server, Box, AlertTriangle, CheckCircle, XCircle, Clock, FileCode
 } from "lucide-react";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { UserDockerEditorModal } from "@/components/admin/UserDockerEditorModal";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -19,6 +20,9 @@ export default function UserDetailsPage() {
 
   const { data: user, error } = useSWR(userId ? `/api/admin/users/${userId}` : null, fetcher);
   const [activeTab, setActiveTab] = useState<"OVERVIEW" | "PROJECTS" | "SCANS">("OVERVIEW");
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const [selectedServiceName, setSelectedServiceName] = useState<string>("");
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   if (error) return <div className="p-8 text-center text-red-500">Failed to load user</div>;
   if (!user) return <div className="p-8 text-center text-gray-500">Loading user details...</div>;
@@ -57,9 +61,21 @@ export default function UserDetailsPage() {
         
         <div className="flex-1">
           <div className="flex items-center gap-3">
-             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {user.name || user.email || "Unknown User"}
-             </h1>
+             <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {user.firstnameTH ? `${user.firstnameTH} ${user.lastnameTH}` : (user.name || user.email || "Unknown User")}
+                </h1>
+                <div className="flex flex-col">
+                    {user.firstnameTH && user.name && (
+                        <span className="text-sm text-gray-500 dark:text-gray-400">{user.name}</span>
+                    )}
+                    {user.studentId && (
+                        <span className="text-xs font-mono text-purple-600 dark:text-purple-400 mt-0.5">
+                            {user.studentId}
+                        </span>
+                    )}
+                </div>
+             </div>
              <span className={`px-2 py-0.5 rounded text-xs font-medium border ${
                 user.role === "ADMIN" 
                 ? "bg-gray-100 border-gray-300 text-gray-800 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
@@ -94,6 +110,53 @@ export default function UserDetailsPage() {
           </div>
         </div>
       </div>
+      
+      {/* CMU Profile Details (if available) */}
+      {(user.firstnameTH || user.organizationName || user.studentId) && (
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-purple-600" />
+                CMU Profile Data
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {user.firstnameTH && (
+                    <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold mb-1">Thai Name</p>
+                        <p className="text-sm text-gray-900 dark:text-white font-medium">{user.firstnameTH} {user.lastnameTH}</p>
+                    </div>
+                )}
+                {user.firstnameEN && (
+                    <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold mb-1">English Name</p>
+                        <p className="text-sm text-gray-900 dark:text-white font-medium">{user.firstnameEN} {user.lastnameEN}</p>
+                    </div>
+                )}
+                {user.studentId && (
+                    <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold mb-1">Student ID</p>
+                        <p className="text-sm text-gray-900 dark:text-white font-medium font-mono">{user.studentId}</p>
+                    </div>
+                )}
+                {user.organizationName && (
+                    <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold mb-1">Organization</p>
+                        <p className="text-sm text-gray-900 dark:text-white font-medium">
+                            {user.organizationName} 
+                            {user.organizationCode && <span className="opacity-60 ml-1">({user.organizationCode})</span>}
+                        </p>
+                    </div>
+                )}
+                {user.itAccountType && (
+                    <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold mb-1">Account Type</p>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                            {user.itAccountType}
+                        </span>
+                    </div>
+                )}
+            </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-800 flex gap-6">
@@ -144,16 +207,37 @@ export default function UserDetailsPage() {
                         </div>
                         <div className="p-2">
                             {group.services?.map((service: any) => (
-                                <div key={service.id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded transition-colors">
+                                <div key={service.id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded transition-colors group">
                                     <div>
-                                        <div className="text-sm font-medium text-gray-900 dark:text-white">{service.serviceName}</div>
+                                        <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                                            {service.serviceName}
+                                            {service.useCustomDockerfile && (
+                                                <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800">
+                                                    Custom Dockerfile
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="text-xs text-gray-500">{service.imageName || "No image"}</div>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="text-xs text-gray-500">Last Scan</div>
-                                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            {service.lastScanAt ? new Date(service.lastScanAt).toLocaleDateString() : "-"}
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-right">
+                                            <div className="text-xs text-gray-500">Last Scan</div>
+                                            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                {service.lastScanAt ? new Date(service.lastScanAt).toLocaleDateString() : "-"}
+                                            </div>
                                         </div>
+                                        
+                                        <button
+                                            onClick={() => {
+                                                setSelectedServiceId(service.id);
+                                                setSelectedServiceName(service.serviceName);
+                                                setIsEditorOpen(true);
+                                            }}
+                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                            title="Edit Dockerfile"
+                                        >
+                                            <FileCode className="h-4 w-4" />
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -215,9 +299,17 @@ export default function UserDetailsPage() {
         )}
 
       </div>
+      
+      <UserDockerEditorModal 
+        isOpen={isEditorOpen} 
+        onClose={() => setIsEditorOpen(false)} 
+        serviceId={selectedServiceId}
+        serviceName={selectedServiceName}
+      />
     </div>
   );
 }
+
 
 function StatCard({ label, value }: any) {
     return (

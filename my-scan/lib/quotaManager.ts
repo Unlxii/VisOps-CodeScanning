@@ -2,11 +2,12 @@
 import { prisma } from './prisma';
 import { getPipelineStatus } from './gitlab';
 
-const MAX_ACTIVE_PROJECTS = 6;
+const DEFAULT_MAX_PROJECTS = 6; // Fallback if user has no maxProjects set
 
 /**
  * Checks if user has reached their project quota
- * Returns true if user can create more projects
+ * Counts ProjectService (not ProjectGroup) — each service = 1 quota unit
+ * Uses per-user maxProjects from DB (admin-editable)
  */
 export async function checkUserQuota(userId: string): Promise<{
   canCreate: boolean;
@@ -15,27 +16,36 @@ export async function checkUserQuota(userId: string): Promise<{
   error?: string;
 }> {
   try {
-    // Count active projects for this user
-    const activeProjectCount = await prisma.projectGroup.count({
+    // Fetch user's personal quota limit
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { maxProjects: true }
+    });
+    const maxAllowed = user?.maxProjects ?? DEFAULT_MAX_PROJECTS;
+
+    // Count active services (across all active groups)
+    const activeServiceCount = await prisma.projectService.count({
       where: {
-        userId: userId,
-        isActive: true
+        group: {
+          userId: userId,
+          isActive: true
+        }
       }
     });
 
-    const canCreate = activeProjectCount < MAX_ACTIVE_PROJECTS;
+    const canCreate = activeServiceCount < maxAllowed;
 
     return {
       canCreate,
-      currentCount: activeProjectCount,
-      maxAllowed: MAX_ACTIVE_PROJECTS,
-      error: canCreate ? undefined : `Quota exceeded: You have ${activeProjectCount}/${MAX_ACTIVE_PROJECTS} active projects. Please delete a project before creating a new one.`
+      currentCount: activeServiceCount,
+      maxAllowed,
+      error: canCreate ? undefined : `Quota exceeded: You have ${activeServiceCount}/${maxAllowed} active services. Please delete a service before creating a new one.`
     };
   } catch (error: any) {
     return {
       canCreate: false,
       currentCount: 0,
-      maxAllowed: MAX_ACTIVE_PROJECTS,
+      maxAllowed: DEFAULT_MAX_PROJECTS,
       error: `Failed to check quota: ${error.message}`
     };
   }

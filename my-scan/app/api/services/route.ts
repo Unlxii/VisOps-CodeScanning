@@ -19,6 +19,13 @@ export async function GET() {
     const userEmail = session.user.email || "";
     const isAdmin = ADMIN_EMAILS.includes(userEmail);
 
+    // Fetch user's quota limit
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { maxProjects: true }
+    });
+    const maxProjects = user?.maxProjects ?? 6;
+
     const services = await prisma.projectService.findMany({
       where: {
         group: {
@@ -62,6 +69,7 @@ export async function GET() {
             vulnLow: true,
             scanMode: true,
             startedAt: true,
+            imagePushed: true, // [NEW] Fetch imagePushed status
           },
         },
       },
@@ -90,10 +98,11 @@ export async function GET() {
         vulnMedium: scan.vulnMedium || 0,
         vulnLow: scan.vulnLow || 0,
         completedAt: scan.startedAt?.toISOString() || new Date().toISOString(),
+        imagePushed: scan.imagePushed, // [NEW] Include in response
       })),
     }));
 
-    return NextResponse.json({ services: transformedServices });
+    return NextResponse.json({ services: transformedServices, maxProjects });
   } catch (error) {
     console.error("Failed to fetch services:", error);
     return NextResponse.json(

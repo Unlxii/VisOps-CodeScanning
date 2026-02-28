@@ -65,7 +65,7 @@ export const CancelledState = ({ scanId, onRescan }: CancelledStateProps) => {
         <p className="text-gray-600 dark:text-slate-400 mb-4 max-w-md">
           This scan was cancelled and will not be processed.
         </p>
-        <div className="text-sm text-gray-500 dark:text-slate-500 mb-6">
+        <div className="text-sm text-gray-500 mb-6 dark:text-slate-500">
           Pipeline ID: <span className="font-mono">{scanId}</span>
         </div>
         
@@ -82,5 +82,4 @@ export const CancelledState = ({ scanId, onRescan }: CancelledStateProps) => {
     </div>
   );
 };
-
 

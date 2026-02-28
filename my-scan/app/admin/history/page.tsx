@@ -259,6 +259,80 @@ export default function AdminHistoryPage() {
     }
   };
 
+  // Selection State
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  // ... (existing helper functions)
+
+  // Selection Logic
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      // Select all visible items on current page
+      const newSelected = new Set(selectedIds);
+      paginatedHistory.forEach((item) => newSelected.add(item.id));
+      setSelectedIds(newSelected);
+    } else {
+      // Deselect all visible items
+      const newSelected = new Set(selectedIds);
+      paginatedHistory.forEach((item) => newSelected.delete(item.id));
+      setSelectedIds(newSelected);
+    }
+  };
+
+  const handleSelectRow = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedIds);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to delete ${selectedIds.size} selected items? This cannot be undone.`
+      )
+    )
+      return;
+
+    setIsBulkDeleting(true);
+    try {
+      const idsToDelete = Array.from(selectedIds);
+      const res = await fetch("/api/admin/history", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: idsToDelete }),
+      });
+
+      if (res.ok) {
+        // Remove deleted items locally
+        const updated = history.filter((item) => !selectedIds.has(item.id));
+        setHistory(updated);
+        setFilteredHistory(updated);
+        setSelectedIds(new Set()); // Clear selection
+      } else {
+        alert("Failed to delete selected items.");
+      }
+    } catch (error) {
+      console.error("Bulk delete failed:", error);
+      alert("Network error.");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  // Check if all visible items are selected
+  const allVisibleSelected =
+    paginatedHistory.length > 0 &&
+    paginatedHistory.every((item) => selectedIds.has(item.id));
+    
+  // Check if some visible items are selected (for indeterminate state visual, though standard checkbox doesn't support it easily in React without ref)
+  const someVisibleSelected = paginatedHistory.some((item) => selectedIds.has(item.id));
+
   if (loading && history.length === 0) {
     return (
       <div className="w-full space-y-6 p-6">
@@ -289,6 +363,20 @@ export default function AdminHistoryPage() {
             </p>
           </div>
           <div className="flex gap-2">
+           {selectedIds.size > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 border border-red-700 rounded-lg text-sm font-medium text-white hover:bg-red-700 transition-colors shadow-sm animate-in fade-in zoom-in-95"
+              >
+                {isBulkDeleting ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Trash2 size={16} />
+                )}
+                Delete ({selectedIds.size})
+              </button>
+            )}
             <button
               onClick={() => {
                 setLoading(true);
@@ -362,53 +450,6 @@ export default function AdminHistoryPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-slate-900 dark:text-white"
-          >
-            <option value="ALL">All Status</option>
-            <option value="SUCCESS">Success</option>
-            <option value="FAILED">Failed</option>
-            <option value="FAILED_SECURITY">Failed Security</option>
-            <option value="RUNNING">Running</option>
-            <option value="QUEUED">Queued</option>
-            <option value="CANCELLED">Cancelled</option>
-          </select>
-
-          {/* User Filter */}
-          <select
-            value={userFilter}
-            onChange={(e) => setUserFilter(e.target.value)}
-            className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-slate-900 dark:text-white"
-          >
-            <option value="ALL">All Users</option>
-            {uniqueUsers.map((email) => (
-              <option key={email} value={email}>
-                {email}
-              </option>
-            ))}
-          </select>
-
-          {/* Date From */}
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-slate-900 dark:text-white"
-            placeholder="From"
-          />
-
-          {/* Date To */}
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-slate-900 dark:text-white"
-            placeholder="To"
-          />
         </div>
 
         {/* Table */}
@@ -417,6 +458,15 @@ export default function AdminHistoryPage() {
             <table className="w-full text-left border-collapse">
               <thead className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 <tr>
+                   {/* Checkbox Header */}
+                  <th className="px-6 py-4 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-6 py-4">User / Group</th>
                   <th className="px-6 py-4">Service / Pipeline</th>
                   <th className="px-6 py-4">Status</th>
@@ -429,7 +479,7 @@ export default function AdminHistoryPage() {
                 {paginatedHistory.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="px-6 py-12 text-center text-slate-400"
                     >
                       <div className="flex flex-col items-center gap-2">
@@ -442,8 +492,18 @@ export default function AdminHistoryPage() {
                   paginatedHistory.map((item) => (
                     <tr
                       key={item.id}
-                      className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors group"
+                      className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors group ${selectedIds.has(item.id) ? "bg-purple-50/50 dark:bg-purple-900/10" : ""}`}
                     >
+                      {/* Checkbox Row */}
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(item.id)}
+                          onChange={(e) => handleSelectRow(item.id, e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                        />
+                      </td>
+
                       {/* User Info */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -499,6 +559,7 @@ export default function AdminHistoryPage() {
 
                       {/* Vulnerabilities */}
                       <td className="px-6 py-4">
+                         {/* ... (Keep existing vulnerability display logic) ... */}
                         {item.vulnCritical === 0 &&
                         item.vulnHigh === 0 &&
                         item.vulnMedium === 0 &&
@@ -547,7 +608,7 @@ export default function AdminHistoryPage() {
 
                       {/* Actions */}
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-1 opacity-100 transition-opacity">
                           <Link
                             href={`/scan/${item.pipelineId}`}
                             className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-md transition-colors"

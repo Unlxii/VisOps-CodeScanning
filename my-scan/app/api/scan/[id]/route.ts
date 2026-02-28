@@ -26,6 +26,10 @@ export async function GET(
         vulnCritical: true, // ค่าที่บันทึกใน DB
         details: true, // JSON ก้อนใหญ่ (เก็บ findings, logs)
         createdAt: true,
+        startedAt: true, // [NEW]
+        completedAt: true, // [NEW]
+        scanLogs: true, // [NEW]
+        pipelineJobs: true, // [NEW] Pipeline Jobs for Stepper
         scanMode: true,
         imagePushed: true, // ✅ Add this field
         service: {
@@ -106,6 +110,12 @@ export async function GET(
 
       findings: findings, // ในนี้จะมี author, email ของ Gitleaks ติดไปด้วยถ้ามี
       logs: logs,
+      
+      pipelineJobs: scan.pipelineJobs, // [NEW] Return pipeline jobs
+      scanLogs: scan.scanLogs,
+      scanDuration: scan.startedAt && scan.completedAt 
+        ? Math.floor((new Date(scan.completedAt).getTime() - new Date(scan.startedAt).getTime()) / 1000)
+        : null,
 
       vulnCritical: scan.vulnCritical, // ใช้สำหรับ Alert Blocked
       pipelineUrl: projectUrl,

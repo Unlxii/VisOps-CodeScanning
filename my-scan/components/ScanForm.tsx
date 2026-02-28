@@ -58,6 +58,7 @@ function ScanFormContent({ buildMode }: Props) {
 
   const [imageName, setImageName] = useState("");
   const [imageTag, setImageTag] = useState("");
+  const [description, setDescription] = useState("");
   const [trivyScanMode, setTrivyScanMode] = useState<"fast" | "full">("fast");
 
   const [useCustomDockerfile, setUseCustomDockerfile] = useState(false);
@@ -182,6 +183,7 @@ function ScanFormContent({ buildMode }: Props) {
           scanMode: buildMode ? "SCAN_AND_BUILD" : "SCAN_ONLY",
           imageTag: imageTag || (buildMode ? "latest" : `audit-${Date.now()}`),
           trivyScanMode,
+          description, // [NEW] Pass description
           force: forceCreate, // Pass force parameter
         }),
       });
@@ -199,6 +201,13 @@ function ScanFormContent({ buildMode }: Props) {
       setLoading(false);
     }
   }
+
+  // [NEW] Auto-fill description based on Group and Service
+  useEffect(() => {
+    if (groupName && serviceName) {
+      setDescription(`${groupName} / ${serviceName}`);
+    }
+  }, [groupName, serviceName]);
 
   return (
     <>
@@ -420,6 +429,22 @@ function ScanFormContent({ buildMode }: Props) {
                     SCANNER SETTINGS
                   </h3>
 
+                  {/* Description Field */}
+                  <div className="mb-4">
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase flex items-center gap-1">
+                      <FileText size={12} /> Description (Optional)
+                    </label>
+                    <input
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder={`${groupName || "Group"} / ${serviceName || "Service"}`}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Auto-generated from Group and Service names.
+                    </p>
+                  </div>
+
                   {/* ✅ Added Version Label for Scan Only */}
                   <div className="mb-6">
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase flex items-center gap-1">
@@ -590,6 +615,7 @@ function ScanFormContent({ buildMode }: Props) {
                   serviceId: duplicateService.id,
                   scanMode: buildMode ? "SCAN_AND_BUILD" : "SCAN_ONLY",
                   imageTag: imageTag || (buildMode ? "latest" : `audit-${Date.now()}`),
+                  description, // [NEW] Pass description
                 }),
               });
               

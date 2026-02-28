@@ -15,8 +15,8 @@ const envSchema = z.object({
   NEXTAUTH_URL: z.string().url().optional(),
   
   // Google OAuth
-  GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
-  GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
   
   // GitLab (optional but recommended)
   GITLAB_URL: z.string().url().optional().default("https://gitlab.com"),
@@ -40,6 +40,11 @@ const envSchema = z.object({
 
 // Parse and validate environment variables
 function validateEnv() {
+  // Skip strict validation during Next.js build phase
+  if (process.env.SKIP_ENV_VALIDATION === '1' || process.env.npm_lifecycle_event === 'build') {
+    return process.env as any;
+  }
+
   try {
     return envSchema.parse(process.env);
   } catch (error) {
@@ -47,7 +52,7 @@ function validateEnv() {
       const missing = error.issues.map((e: z.ZodIssue) => `  - ${e.path.join('.')}: ${e.message}`).join('\n');
       console.error('\n❌ Environment validation failed:\n' + missing + '\n');
       
-      // In development, continue with warnings; in production, throw
+      // In development, continue with warnings; in production, throw if not building
       if (process.env.NODE_ENV === 'production') {
         throw new Error('Missing required environment variables');
       }

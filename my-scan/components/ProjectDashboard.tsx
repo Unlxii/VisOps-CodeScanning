@@ -20,11 +20,13 @@ import {
 import { useRouter } from "next/navigation";
 import AddServiceDialog from "./AddServiceDialog";
 import { getStatusIcon } from "./ui/StatusBadge";
+import { TiltCard } from "@/components/ui/TiltCard";
 
 type Service = {
   id: string;
   serviceName: string;
   contextPath: string;
+  averageDuration?: number; // [NEW]
   repoUrl?: string;
   lastScan?: {
     id: string;
@@ -33,6 +35,7 @@ type Service = {
     imageTag: string;
     createdAt: string;
     vulnCritical: number;
+    imagePushed?: boolean;
   };
 };
 
@@ -188,12 +191,10 @@ export default function ProjectDashboard({ userEmail }: { userEmail: string }) {
     }
   };
 
-  // Use shared getStatusIcon from StatusBadge
-
   return (
     <div className="space-y-6">
       {groups.map((group) => (
-        <div
+        <TiltCard
           key={group.id}
           className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
         >
@@ -284,12 +285,25 @@ export default function ProjectDashboard({ userEmail }: { userEmail: string }) {
                       <Server size={20} className="text-indigo-500" />
                     )}
                     <div>
-                      <h4 className="font-semibold text-slate-700">
+                      <h4 className="font-semibold text-slate-700 flex items-center gap-2">
                         {service.serviceName}
+                        {service.lastScan?.imagePushed && (
+                          <span className="flex items-center gap-1 text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold border border-emerald-200">
+                             🚀 Deployed
+                          </span>
+                        )}
                       </h4>
-                      <p className="text-xs text-slate-400 font-mono">
-                        Path: {service.contextPath}
-                      </p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <p className="text-xs text-slate-400 font-mono">
+                            Path: {service.contextPath}
+                        </p>
+                        {/* [NEW] Show Average Duration */}
+                        <span className="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 flex items-center gap-1">
+                            ⏱️ {service.averageDuration ? 
+                                `Avg: ${Math.floor(service.averageDuration / 60)}m ${service.averageDuration % 60}s` 
+                                : "Est: Pending"}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -300,7 +314,7 @@ export default function ProjectDashboard({ userEmail }: { userEmail: string }) {
                       </span>
                       <div className="flex items-center gap-1 mt-0.5">
                         {getStatusIcon(service.lastScan?.status || 'PENDING')}
-                        <span className="text-slate-700 font-medium">
+                        <span className="text-slate-700 font-medium whitespace-nowrap">
                           {service.lastScan?.status || "Never"}
                         </span>
                       </div>
@@ -368,7 +382,7 @@ export default function ProjectDashboard({ userEmail }: { userEmail: string }) {
               ))}
             </div>
           )}
-        </div>
+        </TiltCard>
       ))}
 
       {groups.length === 0 && (

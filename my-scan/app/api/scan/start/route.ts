@@ -13,6 +13,7 @@ import {
 } from "@/lib/scanConfig";
 import { checkDuplicateGlobally } from "@/lib/validators/serviceValidator";
 import { z } from "zod";
+import { logAction, AuditAction } from "@/lib/logger";
 
 const ScanStartSchema = z.object({
   serviceId: z.string().optional(),
@@ -24,6 +25,7 @@ const ScanStartSchema = z.object({
   projectName: z.string().optional(),
   customDockerfile: z.string().optional(),
   trivyScanMode: z.enum(["fast", "full"]).optional(),
+  description: z.string().optional(), // [NEW] Description
   force: z.boolean().default(false),
 });
 
@@ -55,6 +57,7 @@ export async function POST(req: Request) {
       imageName: manualImageName,
       projectName: manualProjectName,
       force,
+      description,
     } = parseResult.data;
 
     // Validate scan mode
@@ -227,6 +230,7 @@ export async function POST(req: Request) {
           imageName: finalConfig.imageName,
           projectName: finalConfig.projectName,
         },
+        description: description, // [NEW] Save description
       },
     });
 
@@ -254,6 +258,9 @@ export async function POST(req: Request) {
       gitToken: githubToken,
       dockerToken: dockerToken,
       dockerUser: dockerCred?.username,
+
+      // [NEW] Default to FULL scan
+      trivyScanMode: "full",
     };
 
     const published = await publishScanJob(job);
@@ -274,6 +281,16 @@ export async function POST(req: Request) {
         console.error("Cleanup error:", err),
       );
     }
+
+
+    
+    // Audit Log
+    await logAction(userId, AuditAction.SCAN_START, `ScanHistory:${scanHistory.id}`, {
+      serviceId: projectId,
+      scanMode,
+      imageTag,
+      repoUrl: finalConfig.repoUrl,
+    });
 
     return NextResponse.json({
       success: true,

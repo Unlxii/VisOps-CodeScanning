@@ -96,6 +96,17 @@ async function setupQueue(ch: Channel, queueName: string) {
   });
 }
 
+// [NEW] Helper to append logs
+function appendLog(currentLogs: any, status: string, message?: string) {
+  const logs = Array.isArray(currentLogs) ? currentLogs : [];
+  logs.push({
+    status,
+    timestamp: new Date().toISOString(),
+    message,
+  });
+  return logs;
+}
+
 async function handleMessage(msg: ConsumeMessage, ch: Channel) {
   const jobContent = msg.content.toString();
   let job: ScanJob;
@@ -110,7 +121,11 @@ async function handleMessage(msg: ConsumeMessage, ch: Channel) {
 
   console.log(`[Processing] Job ${job.id} (${job.type})`);
   
-  const currentJob = await prisma.scanHistory.findUnique({ where: { id: job.scanHistoryId }, select: { status: true } });
+  const currentJob = await prisma.scanHistory.findUnique({ 
+    where: { id: job.scanHistoryId }, 
+    select: { status: true, scanLogs: true } 
+  });
+  
   if (!currentJob || currentJob.status === "CANCELLED" || currentJob.status === "FAILED_TRIGGER") {
       console.warn(`[Worker] Job ${job.id} was ${currentJob?.status || "deleted"}. Skipping.`);
       ch.ack(msg);
@@ -118,9 +133,35 @@ async function handleMessage(msg: ConsumeMessage, ch: Channel) {
   }
 
   try {
-    await prisma.scanHistory.update({
+    // [NEW] Concurrency Control - Wait if system is busy
+    const MAX_CONCURRENT = job.type === "SCAN_AND_BUILD" ? 4 : 6;
+    
+    while (true) {
+        const targetMode = job.type === "SCAN_AND_BUILD" ? "SCAN_AND_BUILD" : "SCAN_ONLY";
+        const activeScans = await prisma.scanHistory.count({
+            where: {
+                status: "RUNNING",
+                scanMode: targetMode
+            }
+        });
+
+        // console.log(`[Queue] DEBUG: Checking Concurrency for ${targetMode}. Active: ${activeScans}, Limit: ${MAX_CONCURRENT}`);
+
+        if (activeScans < MAX_CONCURRENT) {
+            break; // Slot available
+        }
+
+        console.log(`[Queue] System Busy (${activeScans}/${MAX_CONCURRENT} active). Job ${job.id} waiting...`);
+        await new Promise(r => setTimeout(r, 5000)); // Wait 5s
+    }
+
+    // Now mark as RUNNING and Trigger
+     await prisma.scanHistory.update({
       where: { id: job.scanHistoryId },
-      data: { status: "RUNNING" },
+      data: { 
+        status: "RUNNING",
+        scanLogs: appendLog(currentJob.scanLogs, "RUNNING", "System slot allocated. Triggering pipeline...")
+      },
     });
 
     const pipelineId = await triggerGitLab(job);
@@ -130,6 +171,7 @@ async function handleMessage(msg: ConsumeMessage, ch: Channel) {
       data: {
         pipelineId: String(pipelineId),
         scanId: String(pipelineId),
+        scanLogs: appendLog(currentJob.scanLogs, "PIPELINE_CREATED", `Pipeline ID: ${pipelineId}`)
       },
     });
 
@@ -148,9 +190,16 @@ async function handleMessage(msg: ConsumeMessage, ch: Channel) {
     }
 
     try {
+      // Re-fetch to get latest logs in case of race/interleaved updates (unlikely here but safe)
+      const latestJob = await prisma.scanHistory.findUnique({ where: { id: job.scanHistoryId }, select: { scanLogs: true } });
+      
       await prisma.scanHistory.update({
         where: { id: job.scanHistoryId },
-        data: { status: "FAILED_TRIGGER", errorMessage: errorMessage },
+        data: { 
+          status: "FAILED_TRIGGER", 
+          errorMessage: errorMessage,
+          scanLogs: appendLog(latestJob?.scanLogs, "FAILED_TRIGGER", errorMessage)
+        },
       });
     } catch (dbError) {
       console.error("Failed to update DB status:", dbError);
@@ -174,7 +223,9 @@ async function triggerGitLab(job: ScanJob): Promise<number> {
 
     // --- ตัวแปรสำหรับ Logic ---
     SCAN_MODE: job.type === "SCAN_AND_BUILD" ? "SCAN_AND_BUILD" : "SCAN_ONLY",
+    
     CONTEXT_PATH: job.contextPath,
+        
     IMAGE_TAG: job.imageTag || "latest",
     SCAN_HISTORY_ID: job.scanHistoryId,
 
@@ -187,6 +238,9 @@ async function triggerGitLab(job: ScanJob): Promise<number> {
     PROJECT_NAME: projectPath, 
     FRONTEND_USER: job.username || "unknown_user", // [INFO] Use Username instead of ID
     USER_TAG: job.imageTag || "latest",
+
+    // [NEW] Pass Trivy Scan Mode
+    TRIVY_SCAN_MODE: job.trivyScanMode || "full",
   };
 
   if (job.imageName) variables.IMAGE_NAME = job.imageName;
@@ -327,26 +381,68 @@ async function pollRunningScans() {
         status: "RUNNING",
         AND: [
             { pipelineId: { not: { equals: null } } },
-            // Exclude waiting/pending IDs generated locally
             { pipelineId: { not: { startsWith: "WAITING" } } }
         ]
       },
-      select: { id: true, pipelineId: true }
+      select: { id: true, pipelineId: true, scanLogs: true, startedAt: true } // [NEW] Select startedAt
     });
 
     if (runningScans.length === 0) return;
 
-    console.log(`[Poller] Checking ${runningScans.length} running scans...`);
+    // console.log(`[Poller] Checking ${runningScans.length} running scans...`);
+
+    const TIMEOUT_MS = 60 * 60 * 1000; // 60 Minutes
 
     for (const scan of runningScans) {
         if (!scan.pipelineId) continue;
+
+        // [NEW] Zombie Detection
+        if (scan.startedAt) {
+            const age = Date.now() - new Date(scan.startedAt).getTime();
+            if (age > TIMEOUT_MS) {
+                console.warn(`[Zombie] Scan ${scan.id} (Pipeline ${scan.pipelineId}) timed out (>60m). Killing...`);
+                await prisma.scanHistory.update({
+                    where: { id: scan.id },
+                    data: {
+                        status: "FAILED",
+                        errorMessage: "Job timed out (Zombie Detection)",
+                        completedAt: new Date(),
+                        scanLogs: appendLog(scan.scanLogs, "FAILED", "Job timed out (Zombie Detection)")
+                    }
+                });
+                continue; // Skip GitLab check if we killed it
+            }
+        }
         
         try {
+            // 1. Fetch Pipeline Status
             const url = `${GITLAB_API_URL}/projects/${GITLAB_PROJECT_ID}/pipelines/${scan.pipelineId}`;
             const res = await axios.get(url, {
                 headers: { "PRIVATE-TOKEN": GITLAB_TOKEN },
-                timeout: 5000, // [INFO] 5s Timeout for polling
+                timeout: 5000, 
             });
+
+            // 2. [NEW] Fetch Pipeline Jobs (Stages)
+            // We fetch the jobs to visualize the stepper (Build -> Test -> Scan, etc.)
+            let pipelineJobs = [];
+            try {
+                const jobsRes = await axios.get(
+                    `${GITLAB_API_URL}/projects/${GITLAB_PROJECT_ID}/pipelines/${scan.pipelineId}/jobs`,
+                    { headers: { "PRIVATE-TOKEN": GITLAB_TOKEN } }
+                );
+                // Map to simplified structure
+                pipelineJobs = jobsRes.data.map((job: any) => ({
+                    id: job.id,
+                    name: job.name,
+                    stage: job.stage,
+                    status: job.status,
+                    started_at: job.started_at,
+                    finished_at: job.finished_at,
+                    duration: job.duration
+                }));
+            } catch (jobErr) {
+                 console.warn(`[Poller] Failed to fetch jobs for ${scan.pipelineId}:`, jobErr);
+            }
             
             const glStatus = res.data.status; 
             let newStatus = "";
@@ -356,20 +452,35 @@ async function pollRunningScans() {
             else if (glStatus === "canceled") newStatus = "CANCELLED";
             else if (glStatus === "skipped") newStatus = "FAILED";
             
+            // [UPDATE] Always update pipelineJobs even if status hasn't changed
+            // This ensures the frontend stepper animates in real-time
+            if (!newStatus || newStatus === "RUNNING") {
+                 await prisma.scanHistory.update({
+                     where: { id: scan.id },
+                     data: { 
+                         pipelineJobs: pipelineJobs // Update jobs progress
+                     } as any
+                 });
+            }
+
             if (newStatus && newStatus !== "RUNNING") {
                  console.log(`[Poller] Scan ${scan.id} (Pipeline ${scan.pipelineId}) changed to ${newStatus}`);
                  
-                 // [NEW] Fetch Artifacts on Success
+                     // [NEW] Fetch Artifacts on Success
                  if (newStatus === "SUCCESS") {
                     await fetchReportArtifacts(scan.pipelineId);
+                    // [NEW] Update Average Duration
+                    await updateServiceAverageDuration(scan.id);
                  }
                  
                  await prisma.scanHistory.update({
                      where: { id: scan.id },
                      data: { 
                          status: newStatus,
-                         completedAt: new Date()
-                     }
+                         completedAt: new Date(),
+                         scanLogs: appendLog(scan.scanLogs as any, newStatus, `Pipeline finished with status ${glStatus}`),
+                         pipelineJobs: pipelineJobs // Save final state of jobs
+                     } as any
                  });
             }
         } catch (error: unknown) {
@@ -385,7 +496,8 @@ async function pollRunningScans() {
                          data: { 
                              status: "CANCELLED",
                              errorMessage: reason,
-                             completedAt: new Date()
+                             completedAt: new Date(),
+                             scanLogs: appendLog(scan.scanLogs, "CANCELLED", reason)
                          }
                      });
                 } else if (status === 401 || status === 403) {
@@ -405,6 +517,59 @@ async function pollRunningScans() {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("[Poller] Error:", errorMessage);
   }
+}
+
+// [NEW] Helper to calculate and update average duration
+async function updateServiceAverageDuration(scanHistoryId: string) {
+    try {
+        const currentScan = await prisma.scanHistory.findUnique({
+            where: { id: scanHistoryId },
+            select: { serviceId: true, startedAt: true }
+        });
+
+        if (!currentScan || !currentScan.startedAt) return;
+
+        // Calculate current duration in seconds
+        const durationSec = Math.round((Date.now() - new Date(currentScan.startedAt).getTime()) / 1000);
+
+        // Fetch last 5 SUCCESSFUL scans for this service to calculate rolling average
+        const lastScans = await prisma.scanHistory.findMany({
+            where: {
+                serviceId: currentScan.serviceId,
+                status: "SUCCESS",
+                startedAt: { not: null },
+                completedAt: { not: null }
+            },
+            orderBy: { createdAt: "desc" },
+            take: 5,
+            select: { startedAt: true, completedAt: true }
+        });
+
+        let totalDuration = durationSec;
+        let count = 1;
+
+        for (const scan of lastScans) {
+            if (scan.startedAt && scan.completedAt) {
+                const d = Math.round((new Date(scan.completedAt).getTime() - new Date(scan.startedAt).getTime()) / 1000);
+                if (d > 0) {
+                    totalDuration += d;
+                    count++;
+                }
+            }
+        }
+
+        const averageDuration = Math.round(totalDuration / count);
+
+        await prisma.projectService.update({
+            where: { id: currentScan.serviceId },
+            data: { averageDuration }
+        });
+
+        console.log(`[Duration] Updated Service ${currentScan.serviceId} avg duration to ${averageDuration}s (based on ${count} scans)`);
+
+    } catch (e) {
+        console.error(`[Duration] Failed to update average duration for scan ${scanHistoryId}:`, e);
+    }
 }
 
 startWorker();

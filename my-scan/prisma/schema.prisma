@@ -52,12 +52,24 @@ model User {
   isDockerOrganization Boolean   @default(false)
   dockerOrgName        String?
   isSetupComplete      Boolean   @default(false)
+  maxProjects          Int       @default(6)    // Per-user quota (admin-editable)
 
   credentials    Credential[]
   accounts       Account[]
   groups         ProjectGroup[]
   sessions       Session[]
   supportTickets SupportTicket[]
+  auditLogs      AuditLog[]
+
+  // CMU Profile Data
+  firstnameTH      String?
+  lastnameTH       String?
+  firstnameEN      String?
+  lastnameEN       String?
+  organizationCode String?
+  organizationName String?
+  itAccountType    String?
+  studentId        String?
 }
 
 model Credential {
@@ -111,6 +123,7 @@ model ProjectService {
   id                   String        @id @default(uuid())
   serviceName          String
   contextPath          String
+  averageDuration      Int?          // [NEW] Average scan duration in seconds
   imageName            String
   dockerUser           String?
   dockerToken          String?
@@ -140,6 +153,7 @@ model ScanHistory {
   acknowledgedBy         String?
   buildLogs              String?
   completedAt            DateTime?
+  description            String?        // [NEW] User provided description
   errorMessage           String?
   imagePushed            Boolean        @default(false)
   isCriticalAcknowledged Boolean        @default(false)
@@ -148,6 +162,8 @@ model ScanHistory {
   previousScanId         String?
   queuedAt               DateTime       @default(now())
   reportJson             Json?
+  scanLogs               Json?          // [NEW] Array of { state, timestamp, message }
+  pipelineJobs           Json?          // [NEW] Array of GitLab Jobs: { id, name, status, stage, duration, ... }
   scanMode               String         @default("SCAN_AND_BUILD")
   serviceId              String
   startedAt              DateTime?
@@ -176,4 +192,21 @@ model SupportTicket {
 
   @@index([userId, status])
   @@index([status, priority])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String
+  action    String   // e.g., "LOGIN", "START_SCAN", "UPDATE_SETTINGS"
+  resource  String?  // e.g., "ProjectService:123"
+  details   Json?    // Flexible JSON for details
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  
+  actor     User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
 }
