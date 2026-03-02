@@ -45,7 +45,7 @@ export default function SettingsPage() {
   // Initial Data Fetch
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
     if (status === "authenticated") {

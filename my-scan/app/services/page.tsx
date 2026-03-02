@@ -71,7 +71,7 @@ export default function ServicesPage() {
     try {
       const response = await fetch("/api/services");
       if (response.status === 401) {
-        router.replace("/login");
+        router.replace("/");
         return;
       }
       if (response.ok) {
