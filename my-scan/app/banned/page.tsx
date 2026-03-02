@@ -24,10 +24,10 @@ export default function BannedPage() {
 
       <div className="mt-8">
         <Link 
-          href="/login"
+          href="/"
           className="text-sm text-gray-500 hover:text-white transition-colors"
         >
-          &larr; Back to Login
+          &larr; Back to Home
         </Link>
       </div>
     </div>

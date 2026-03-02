@@ -67,7 +67,7 @@ export default function PendingPage() {
           </a>
           <button
             onClick={() => signOut({ 
-               callbackUrl: process.env.NEXT_PUBLIC_CMU_ENTRAID_LOGOUT_URL || "/login" 
+               callbackUrl: process.env.NEXT_PUBLIC_CMU_ENTRAID_LOGOUT_URL || "/" 
             })}
             className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-medium text-sm"
           >
