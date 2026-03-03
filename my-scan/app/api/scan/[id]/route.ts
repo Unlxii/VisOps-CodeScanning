@@ -19,18 +19,18 @@ function extractAllFindings(scan: any): any[] {
   const details = (scan.details as any) || {};
 
   // 1. SARIF (Trivy Standard)
-  if (scan.reportJson && (scan.reportJson as any).runs) {
-    (scan.reportJson as any).runs.forEach((run: any) => {
-      if (run.results) {
+  if (scan.reportJson && (scan.reportJson as any).trivy && (scan.reportJson as any).trivy.Results) {
+    (scan.reportJson as any).trivy.Results.forEach((run: any) => {
+      if (run.Vulnerabilities) {
         findings = findings.concat(
-          run.results.map((r: any) => ({
-            id: r.ruleId || "UNKNOWN_RULE",
+          run.Vulnerabilities.map((v: any) => ({
+            id: v.VulnerabilityID || "UNKNOWN_RULE",
             sourceTool: "Trivy",
-            pkgName: r.locations?.[0]?.physicalLocation?.artifactLocation?.uri || "Unknown",
-            installedVersion: String(r.locations?.[0]?.physicalLocation?.region?.startLine || "0"),
-            title: r.ruleId || "Vulnerability",
-            severity: normalizeSeverity(r.level),
-            description: r.message?.text || "No description",
+            pkgName: v.PkgName || "Unknown",
+            installedVersion: v.InstalledVersion || "0",
+            title: v.Title || v.VulnerabilityID || "Vulnerability",
+            severity: normalizeSeverity(v.Severity),
+            description: v.Description || "No description",
           }))
         );
       }

@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Loader2, AlertCircle, XCircle, GitCompare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
+import { v4 as uuidv4 } from "uuid";
 
 import PipelineStepper from "@/components/PipelineStepper"; // [NEW]
 import ConfirmBuildButton from "./ReleaseButton";
-import { Run, ComparisonData } from "./pipeline/types";
+import { Run, ComparisonData, Vulnerability } from "./pipeline/types";
 import { QueuedState, CancelledState } from "./pipeline/StatusViews";
 import { StatusHeader } from "./pipeline/StatusHeader";
 import { SummaryCards } from "./pipeline/SummaryCards";
@@ -145,6 +146,62 @@ export default function PipelineView(props: {
     }
   }, [run?.status, scanId, run?.serviceId]);
 
+  // Extract findings safely
+  const extractedFindings: Vulnerability[] = useMemo(() => {
+    if (!run) return [];
+    let allFindings = run.findings || [];
+    
+    // If no compiled findings exist, try to parse from rawReports 
+    // This happens when the worker poller saves raw reports but doesn't re-compile details.findings
+    if (allFindings.length === 0 && run.rawReports) {
+      if (run.rawReports.trivy?.Results) {
+        run.rawReports.trivy.Results.forEach((result: any) => {
+           if (result.Vulnerabilities) {
+              result.Vulnerabilities.forEach((v: any) => {
+                 allFindings.push({
+                   id: v.VulnerabilityID || uuidv4(),
+                   title: v.Title || v.VulnerabilityID,
+                   description: v.Description,
+                   severity: v.Severity ? v.Severity.toLowerCase() : "unknown",
+                   pkgName: v.PkgName || "Unknown Package",
+                   installedVersion: v.InstalledVersion,
+                   fixedVersion: v.FixedVersion,
+                   sourceTool: "Trivy"
+                 });
+              });
+           }
+        });
+      }
+      if (run.rawReports.semgrep?.results) {
+         run.rawReports.semgrep.results.forEach((issue: any) => {
+            allFindings.push({
+              id: issue.check_id || uuidv4(),
+              title: issue.extra?.message || issue.check_id,
+              severity: issue.extra?.severity?.toLowerCase() || "unknown",
+              pkgName: issue.path || "Unknown File",
+              installedVersion: "",
+              sourceTool: "Semgrep"
+            });
+         });
+      }
+      if (Array.isArray(run.rawReports.gitleaks)) {
+         run.rawReports.gitleaks.forEach((secret: any) => {
+            allFindings.push({
+              id: secret.RuleID || uuidv4(),
+              title: secret.Description || "Leaked Secret",
+              severity: "critical", // Gitleaks are always critical
+              pkgName: secret.File || "Unknown File",
+              installedVersion: "",
+              sourceTool: "Gitleaks",
+              author: secret.Author,
+              email: secret.Email
+            });
+         });
+      }
+    }
+    return allFindings;
+  }, [run]);
+
   const handleDownload = (reportName: string, data: any) => {
     if (!data) return alert("Report not available");
     const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -260,7 +317,8 @@ export default function PipelineView(props: {
   const isScanOnly = scanMode === "SCAN_ONLY" || run.scanMode === "SCAN_ONLY";
 
   const totalFindings =
-    run.counts.critical + run.counts.high + run.counts.medium + run.counts.low;
+    run.counts.critical + run.counts.high + run.counts.medium + run.counts.low || extractedFindings.length;
+           
   const gitleaksCount = Array.isArray(run.rawReports?.gitleaks)
     ? run.rawReports.gitleaks.length
     : 0;
@@ -282,9 +340,15 @@ export default function PipelineView(props: {
       {run && (
         <PipelineStepper 
              jobs={(run as any).pipelineJobs || []} 
-             status={run.status} 
+             status={
+                run.status === "SUCCESS" && 
+                ((run.counts?.critical > 0) || (run.counts?.high > 0))
+                  ? "FAILED_SECURITY" 
+                  : run.status
+             } 
              scanMode={run.scanMode || scanMode || "SCAN_AND_BUILD"} 
-             imagePushed={(run as any).imagePushed} 
+             imagePushed={(run as any).imagePushed}
+             counts={run.counts}
         />
       )}
       
@@ -335,7 +399,12 @@ export default function PipelineView(props: {
       {!isScanOnly && (isSuccess || run.status?.toUpperCase() === "MANUAL") && !isBlocked && (
         <ConfirmBuildButton 
             scanId={scanId} 
-            status={run.status} 
+            status={
+                run.status === "SUCCESS" && 
+                ((run.counts?.critical > 0) || (run.counts?.high > 0))
+                  ? "FAILED_SECURITY" 
+                  : run.status
+            } 
             vulnCount={run.counts.critical} 
             imagePushed={(run as any).imagePushed}
             onSuccess={fetchStatus} // [NEW] Trigger refresh immediately
@@ -368,7 +437,7 @@ export default function PipelineView(props: {
         <div className="lg:col-span-2 space-y-6">
           {comparison && <ComparisonSection comparison={comparison} />}
           <FindingsTable
-            findings={run.findings}
+            findings={extractedFindings}
             isScanning={isScanning}
             isSuccess={isSuccess}
             totalFindings={totalFindings}

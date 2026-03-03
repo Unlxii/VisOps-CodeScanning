@@ -13,9 +13,11 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || session.user.role !== "admin") {
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
+
+    const isSuperAdmin = session.user.role === "SUPERADMIN";
 
     const body = await req.json();
     const { userId, action } = ActionSchema.parse(body);
@@ -36,8 +38,13 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // PROTECT SUPER ADMIN: Identify by email "admin@local" or specific ID if fixed
-    if (targetUser.email === "admin@local") {
+    // PROTECT ADMINS AND SUPERADMINS: Only Superadmins can modify other Admins
+    if (!isSuperAdmin && (targetUser.role === "ADMIN" || targetUser.role === "SUPERADMIN")) {
+        return NextResponse.json({ error: "Cannot modify Admin privileges" }, { status: 403 });
+    }
+
+    // PROTECT SUPERADMIN FROM EVERYONE
+    if (targetUser.role === "SUPERADMIN") {
         return NextResponse.json({ error: "Cannot modify Super Admin privileges" }, { status: 403 });
     }
 

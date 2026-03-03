@@ -11,7 +11,7 @@ export async function GET() {
 
   const userRole = (session?.user as any)?.role;
 
-  if (userRole !== "admin" && userRole !== "ADMIN") {
+  if (userRole !== "admin" && userRole !== "ADMIN" && userRole !== "SUPERADMIN") {
     console.log("Admin History API: Forbidden - Role is", userRole);
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -19,7 +19,19 @@ export async function GET() {
   console.log("Admin History API: Authorized. Fetching history...");
 
   try {
+    const isSuperAdmin = userRole === "SUPERADMIN";
+
     const allHistory = await prisma.scanHistory.findMany({
+      take: 100, // [PERFORMANCE] Bound to O(1) memory instead of O(N) total DB size
+      where: isSuperAdmin ? undefined : {
+        service: {
+          group: {
+            user: {
+              role: { notIn: ["ADMIN", "SUPERADMIN"] }
+            }
+          }
+        }
+      },
       include: {
         service: {
           include: {
@@ -54,7 +66,7 @@ export async function DELETE(req: Request) {
   const session = await getServerSession(authOptions);
   const userRole = (session?.user as any)?.role;
 
-  if (userRole !== "admin" && userRole !== "ADMIN") {
+  if (userRole !== "admin" && userRole !== "ADMIN" && userRole !== "SUPERADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

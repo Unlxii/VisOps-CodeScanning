@@ -297,6 +297,7 @@ export async function POST(req: Request) {
       scanId: scanHistory.id,
       status: "QUEUED",
       message: "Job queued successfully",
+      estimatedDuration: serviceId ? (await prisma.projectService.findUnique({ where: { id: serviceId }, select: { averageDuration: true } }))?.averageDuration : undefined,
     });
   } catch (error: any) {
     console.error("[Scan Start Error]:", error);
@@ -309,17 +310,19 @@ export async function POST(req: Request) {
 
 async function cleanupOldScans(serviceId: string) {
   try {
-    const allScans = await prisma.scanHistory.findMany({
+    const scansToDelete = await prisma.scanHistory.findMany({
       where: { serviceId },
       orderBy: { startedAt: "desc" },
-      select: { id: true, startedAt: true },
+      skip: MAX_SCANS_PER_SERVICE,
+      select: { id: true },
     });
-    if (allScans.length > MAX_SCANS_PER_SERVICE) {
-      const scansToDelete = allScans.slice(MAX_SCANS_PER_SERVICE);
+    
+    if (scansToDelete.length > 0) {
       await prisma.scanHistory.deleteMany({
         where: { id: { in: scansToDelete.map((s) => s.id) } },
       });
     }
+
     if (MAX_SCAN_AGE_DAYS > 0) {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - MAX_SCAN_AGE_DAYS);

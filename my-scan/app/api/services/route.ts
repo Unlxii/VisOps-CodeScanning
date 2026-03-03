@@ -5,8 +5,6 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_EMAILS = ["admin@example.com", "dev@southth.com"];
-
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -16,21 +14,24 @@ export async function GET() {
     }
 
     const userId = (session.user as any).id;
-    const userEmail = session.user.email || "";
-    const isAdmin = ADMIN_EMAILS.includes(userEmail);
+    const userRole = (session.user as any).role;
+    const isAdmin = userRole === "ADMIN" || userRole === "admin" || userRole === "SUPERADMIN";
 
     // Fetch user's quota limit
-    const user = await prisma.user.findUnique({
+    const user = await (prisma.user as any).findUnique({
       where: { id: userId },
       select: { maxProjects: true }
     });
-    const maxProjects = user?.maxProjects ?? 6;
+    const maxProjects = (user as any)?.maxProjects ?? 6;
 
     const services = await prisma.projectService.findMany({
+      take: 500, // [PERFORMANCE] Safety bound for admin view scale
       where: {
         group: {
-          // ถ้าไม่ใช่ Admin ให้ดูได้แค่ของตัวเอง
-          ...(isAdmin ? {} : { userId: userId }),
+          // [BUGFIX] My Services page should strictly show only the logged-in user's services.
+          // Even if they are an ADMIN, they should only see *their own* projects here.
+          // Global viewing belongs in the /admin scope.
+          userId: userId,
           isActive: true,
         },
       },

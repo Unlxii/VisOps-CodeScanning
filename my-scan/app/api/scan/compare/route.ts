@@ -29,7 +29,8 @@ export async function POST(req: Request) {
     const findings1 = extractAllFindings(scan1);
     const findings2 = extractAllFindings(scan2);
 
-    const createKey = (f: any) => `${f.pkgName}:${f.installedVersion}:${f.id}`;
+    // Key uses the same fields as the frontend Finding interface
+    const createKey = (f: any) => `${f.file}:${f.line}:${f.ruleId}`;
     const map1 = new Map(findings1.map((f) => [createKey(f), f]));
     const map2 = new Map(findings2.map((f) => [createKey(f), f]));
 
@@ -70,18 +71,25 @@ function formatScanSummary(scan: any) {
     startedAt: scan.startedAt,
     vulnCritical: scan.vulnCritical,
     vulnHigh: scan.vulnHigh,
+    vulnMedium: scan.vulnMedium,
+    vulnLow: scan.vulnLow,
   };
 }
 
 function normalizeSeverity(sev: string): string {
-  if (!sev) return "low";
-  const s = sev.toLowerCase();
-  if (s === "error" || s === "critical") return "critical";
-  if (s === "warning" || s === "high") return "high";
-  if (s === "note" || s === "info" || s === "low") return "low";
+  if (!sev) return "LOW";
+  const s = sev.toUpperCase();
+  if (s === "ERROR" || s === "CRITICAL") return "CRITICAL";
+  if (s === "WARNING" || s === "HIGH") return "HIGH";
+  if (s === "MEDIUM") return "MEDIUM";
+  if (s === "NOTE" || s === "INFO" || s === "LOW") return "LOW";
   return s;
 }
 
+/**
+ * Extract findings in the format the frontend expects:
+ * { file, line, ruleId, severity, message, sourceTool }
+ */
 function extractAllFindings(scan: any): any[] {
   let findings: any[] = [];
   const details = (scan.details as any) || {};
@@ -92,34 +100,29 @@ function extractAllFindings(scan: any): any[] {
       if (run.results) {
         findings = findings.concat(
           run.results.map((r: any) => ({
-            id: r.ruleId || "UNKNOWN_RULE",
-            sourceTool: "Trivy",
-            pkgName: r.locations?.[0]?.physicalLocation?.artifactLocation?.uri || "Unknown",
-            installedVersion: String(r.locations?.[0]?.physicalLocation?.region?.startLine || "0"),
-            title: r.ruleId || "Vulnerability",
+            file: r.locations?.[0]?.physicalLocation?.artifactLocation?.uri || "Unknown",
+            line: r.locations?.[0]?.physicalLocation?.region?.startLine || 0,
+            ruleId: r.ruleId || "UNKNOWN_RULE",
             severity: normalizeSeverity(r.level),
-            description: r.message?.text || "No description",
+            message: r.message?.text || "No description",
+            sourceTool: "Trivy",
           }))
         );
       }
     });
   }
 
-  // 2. Gitleaks (Secrets) - Handle both array formats and object payloads
+  // 2. Gitleaks (Secrets)
   const gitleaksInput = details.gitleaksReport || (scan.reportJson && scan.reportJson.gitleaks);
   if (gitleaksInput && Array.isArray(gitleaksInput)) {
     findings = findings.concat(
       gitleaksInput.map((s: any) => ({
-        id: s.RuleID || "SECRET-LEAK",
+        file: s.File || "Unknown",
+        line: s.StartLine || 0,
+        ruleId: s.RuleID || "SECRET-LEAK",
+        severity: "CRITICAL",
+        message: s.Description || `Secret match: ${s.Match}`,
         sourceTool: "Gitleaks",
-        pkgName: s.File || "Unknown",
-        installedVersion: String(s.StartLine || "0"),
-        title: s.RuleID || "Hardcoded Secret",
-        severity: "critical", // Gitleaks are always critical
-        description: s.Description || `Secret match: ${s.Match}`,
-        author: s.Author, // Inject committer name
-        email: s.Email,   // Inject committer email
-        commit: s.Commit, // Inject commit hash
       }))
     );
   }
@@ -129,13 +132,12 @@ function extractAllFindings(scan: any): any[] {
   if (semgrepInput?.results && Array.isArray(semgrepInput.results)) {
     findings = findings.concat(
       semgrepInput.results.map((r: any) => ({
-        id: r.check_id || "CODE-ISSUE",
-        sourceTool: "Semgrep",
-        pkgName: r.path || "Unknown",
-        installedVersion: String(r.start?.line || "0"),
-        title: r.check_id || "Code Vulnerability",
+        file: r.path || "Unknown",
+        line: r.start?.line || 0,
+        ruleId: r.check_id || "CODE-ISSUE",
         severity: normalizeSeverity(r.extra?.severity),
-        description: r.extra?.message || "Code vulnerability found",
+        message: r.extra?.message || "Code vulnerability found",
+        sourceTool: "Semgrep",
       }))
     );
   }
@@ -143,13 +145,12 @@ function extractAllFindings(scan: any): any[] {
   // 4. Legacy Fallback
   if (findings.length === 0 && details.findings) {
     findings = details.findings.map((f: any) => ({
-      id: f.ruleId || f.vulnerabilityID || "UNKNOWN",
-      sourceTool: f.type || "Legacy",
-      pkgName: f.file || f.pkgName || "Unknown",
-      installedVersion: String(f.line || "0"),
-      title: f.ruleId || f.vulnerabilityID || "UNKNOWN",
+      file: f.file || f.pkgName || "Unknown",
+      line: f.line || 0,
+      ruleId: f.ruleId || f.vulnerabilityID || "UNKNOWN",
       severity: normalizeSeverity(f.severity),
-      description: f.message || f.description || f.title || "",
+      message: f.message || f.description || f.title || "",
+      sourceTool: f.type || "Legacy",
     }));
   }
 

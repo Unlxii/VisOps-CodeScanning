@@ -267,18 +267,27 @@ export default function DashboardPage() {
         }),
       });
 
-      // ✅ เพิ่มบรรทัดนี้: อ่านข้อมูล JSON จาก Response
       const data = await res.json();
 
       if (res.ok) {
-        showToast("Scan started", "success");
         setShowRescanModal(null);
         setRescanTag("");
         mutate("/api/scan/status/active");
 
-        // ✅ เพิ่มบรรทัดนี้: สั่ง Redirect ไปหน้าผลลัพธ์ทันที!
+        let durationText = "";
+        if (data.estimatedDuration) {
+           const mins = Math.floor(data.estimatedDuration / 60);
+           const secs = data.estimatedDuration % 60;
+           durationText = ` (Est. time: ${mins > 0 ? `${mins}m ` : ''}${secs}s)`;
+        }
+
+        // ✅ The user requested NOT to show popup IF navigating to the Scan Details page.
+        // We only show toast if NOT navigating (e.g., manual queue but no redirect).
         if (data.scanId) {
           router.push(`/scan/${data.scanId}`);
+          // No showToast here
+        } else {
+          showToast(`Scan started${durationText}`, "success");
         }
       } else {
         showToast("Failed to start scan", "error");

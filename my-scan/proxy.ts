@@ -20,8 +20,8 @@ export default withAuth(
     const isAdminLoginPage = pathname === "/admin/login";
 
     // 0. Admin Login Page Logic
-    // If logged in as ADMIN, redirect to dashboard (don't show login page)
-    if (isAdminLoginPage && token && token.role === UserRoles.ADMIN) {
+    // If logged in as ADMIN or SUPERADMIN, redirect to dashboard (don't show login page)
+    if (isAdminLoginPage && token && (token.role === UserRoles.ADMIN || token.role === UserRoles.SUPERADMIN)) {
          return NextResponse.redirect(new URL("/dashboard", req.url));
     }
     // If accessing admin login page, allow it (logic handled by page or Authorized callback)
@@ -48,7 +48,7 @@ export default withAuth(
     }
     
     // 3. Admin Routes Protection
-    if (isAdminPage && token?.role !== UserRoles.ADMIN) {
+    if (isAdminPage && token?.role !== UserRoles.ADMIN && token?.role !== UserRoles.SUPERADMIN) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
     

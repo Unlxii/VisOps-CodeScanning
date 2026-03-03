@@ -175,6 +175,13 @@ export async function POST(req: Request) {
       semgrepReport: null,
       trivyReport: null,
     };
+    
+    const idempotencyStages = currentDetails.stages || {};
+    if (stage && idempotencyStages[stage] && idempotencyStages[stage].status === status) {
+       console.log(`[Webhook] Duplicate event received for stage ${stage} with status ${status}. Ignoring.`);
+       return NextResponse.json({ success: true, message: "Duplicate event dropped" });
+    }
+    
     const newFindings = details?.findings || [];
     const newLogs = details?.logs || [];
 
@@ -315,19 +322,20 @@ export async function POST(req: Request) {
 
       // Auto-delete old scans (keep only 2 most recent per service)
       try {
-        const allScans = await prisma.scanHistory.findMany({
+        const scansToDelete = await prisma.scanHistory.findMany({
           where: { serviceId: scanRecord.serviceId },
           orderBy: { startedAt: "desc" },
+          skip: 2,
           select: { id: true },
         });
 
-        if (allScans.length > 2) {
-          const scansToDelete = allScans.slice(2).map((s) => s.id);
+        if (scansToDelete.length > 0) {
+          const idsToDelete = scansToDelete.map((s) => s.id);
           await prisma.scanHistory.deleteMany({
-            where: { id: { in: scansToDelete } },
+            where: { id: { in: idsToDelete } },
           });
           console.log(
-            `[Webhook] Auto-deleted ${scansToDelete.length} old scans for service ${scanRecord.serviceId}`
+            `[Webhook] Auto-deleted ${idsToDelete.length} old scans for service ${scanRecord.serviceId}`
           );
         }
       } catch (err) {

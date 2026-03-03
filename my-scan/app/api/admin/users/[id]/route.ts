@@ -11,18 +11,21 @@ export async function GET(
     const session = await getServerSession(authOptions);
     const { id: userId } = await params;
 
-    // 1. Auth Check: Must be ADMIN
-    if (!session || session.user.role !== "ADMIN") {
+    // 1. Auth Check: Must be ADMIN or SUPERADMIN
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // prevent admin view other admin details (BUT allow viewing self)
+    const isSuperAdmin = session.user.role === "SUPERADMIN";
+
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { role: true },
     });
 
-    if (targetUser?.role === "ADMIN" && userId !== (session.user as any).id) {
+    // prevent admin view other admin details (BUT allow viewing self)
+    // Superadmin has no such restrictions
+    if (!isSuperAdmin && targetUser && (targetUser.role === "ADMIN" || targetUser.role === "SUPERADMIN") && userId !== (session.user as any).id) {
       return NextResponse.json(
         { error: "Access Denied: Cannot view other admin details" },
         { status: 403 }
@@ -135,18 +138,21 @@ export async function PATCH(
     const { id: userId } = await params;
     const body = await request.json();
 
-    // 1. Auth Check: Must be ADMIN
-    if (!session || session.user.role !== "ADMIN") {
+    // 1. Auth Check: Must be ADMIN or SUPERADMIN
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // 2. Prevent banning other admins
+    const isSuperAdmin = session.user.role === "SUPERADMIN";
+
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { role: true },
     });
 
-    if (targetUser?.role === "ADMIN") {
+    // 2. Prevent banning other admins
+    // Superadmin can edit ANYONE except themselves (safety feature handled elsewhere)
+    if (!isSuperAdmin && targetUser && (targetUser.role === "ADMIN" || targetUser.role === "SUPERADMIN")) {
       return NextResponse.json(
         { error: "Access Denied: Cannot modify other admin" },
         { status: 403 }

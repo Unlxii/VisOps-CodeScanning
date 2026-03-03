@@ -157,7 +157,7 @@ export const authOptions: NextAuthOptions = {
 
         // Allow admins to login via credentials OR allow anyone in development mode
         const isDev = process.env.NODE_ENV === "development";
-        const isAdmin = user && user.role === "ADMIN";
+        const isAdmin = user && (user.role === "ADMIN" || user.role === "SUPERADMIN");
 
         if (!user || !user.password || (!isAdmin && !isDev)) {
           throw new Error("Invalid credentials or not an admin");
@@ -271,17 +271,6 @@ export const authOptions: NextAuthOptions = {
   events: {
     async signIn({ user, account, profile, isNewUser }) {
       try {
-        console.log("DEBUG: SignIn Event Triggered");
-        console.log("DEBUG: Provider:", account?.provider);
-        if (profile) {
-            console.log("DEBUG: Profile Keys:", Object.keys(profile));
-            console.log("DEBUG: Profile Data (Partial):", JSON.stringify({
-                firstname_TH: (profile as any).firstname_TH,
-                organization_name_EN: (profile as any).organization_name_EN,
-                itaccounttype_EN: (profile as any).itaccounttype_EN
-            }, null, 2));
-        }
-
         // Sync CMU Profile Data on every login
         if (account?.provider === "cmu-entraid" && profile) {
            const cmuProfile = profile as any;

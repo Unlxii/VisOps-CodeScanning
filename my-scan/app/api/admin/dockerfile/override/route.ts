@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     const adminId = (session.user as any).id;
 
     // Only admins can override Dockerfile
-    if (userRole !== 'admin') {
+    if (userRole !== 'admin' && userRole !== 'ADMIN') {
       return NextResponse.json(
         { error: "Admin access required" },
         { status: 403 }
@@ -75,7 +75,7 @@ export async function DELETE(req: Request) {
 
     const userRole = (session.user as any).role;
 
-    if (userRole !== 'admin') {
+    if (userRole !== 'admin' && userRole !== 'ADMIN') {
       return NextResponse.json(
         { error: "Admin access required" },
         { status: 403 }

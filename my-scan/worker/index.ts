@@ -62,9 +62,8 @@ async function startWorker() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buildChannel = (await conn.createChannel()) as any;
     await setupQueue(buildChannel, BUILD_QUEUE_NAME);
-    // [INFO] Limit concurrent Build & Scan jobs to 4 (Quota Rule)
-    // If all 4 slots are busy, new jobs will stay in RabbitMQ with status "QUEUED"
-    await buildChannel.prefetch(4);
+    // [INFO] Single Runner Limits: Scaled to 5 for 8-Core/16GB RAM VM
+    await buildChannel.prefetch(5);
     buildChannel.consume(BUILD_QUEUE_NAME, (msg: ConsumeMessage | null) => {
       if (msg) handleMessage(msg, buildChannel);
     });
@@ -73,9 +72,8 @@ async function startWorker() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const scanChannel = (await conn.createChannel()) as any;
     await setupQueue(scanChannel, SCAN_QUEUE_NAME);
-    // [INFO] Limit concurrent Scan Only jobs to 6 (Quota Rule)
-    // Total concurrency = 4 (Build) + 6 (Scan) = 10 Max Users
-    await scanChannel.prefetch(6);
+    // [INFO] Single Runner Limits: Scaled to 5 for 8-Core/16GB RAM VM
+    await scanChannel.prefetch(5);
     scanChannel.consume(SCAN_QUEUE_NAME, (msg: ConsumeMessage | null) => {
       if (msg) handleMessage(msg, scanChannel);
     });
@@ -133,8 +131,9 @@ async function handleMessage(msg: ConsumeMessage, ch: Channel) {
   }
 
   try {
-    // [NEW] Concurrency Control - Wait if system is busy
-    const MAX_CONCURRENT = job.type === "SCAN_AND_BUILD" ? 4 : 6;
+    // [NEW] Single Runner Concurrency Control - Wait if system is busy
+    // Increased to 5 to maximize usage of an 8-Core 16GB RAM VM
+    const MAX_CONCURRENT = job.type === "SCAN_AND_BUILD" ? 5 : 5;
     
     while (true) {
         const targetMode = job.type === "SCAN_AND_BUILD" ? "SCAN_AND_BUILD" : "SCAN_ONLY";
@@ -306,9 +305,25 @@ const GITLAB_TOKEN = process.env.GITLAB_TOKEN;
 
 const POLLING_INTERVAL = 10000;
 
+let isPolling = false;
 async function startPoller() {
   console.log("[INFO] Starting Status Poller...");
-  setInterval(pollRunningScans, POLLING_INTERVAL);
+  
+  const poll = async () => {
+    if (isPolling) return;
+    isPolling = true;
+    try {
+      await pollRunningScans();
+    } catch (err) {
+      console.error("[Poller] Unexpected error:", err);
+    } finally {
+      isPolling = false;
+      setTimeout(poll, POLLING_INTERVAL);
+    }
+  };
+  
+  // Initial kickoff
+  poll();
 }
 
 // [NEW] Helper to download artifacts
@@ -354,18 +369,57 @@ async function fetchReportArtifacts(pipelineId: string) {
         }
       }
   
-      // 3. Update Database with explicit JSON object
+      // 3. Update Database with explicit JSON object and calculated counts
       if (Object.keys(reportMap).length > 0) {
+         let vulnCritical = 0;
+         let vulnHigh = 0;
+         let vulnMedium = 0;
+         let vulnLow = 0;
+
+         // Parse Trivy
+         if (reportMap.trivy && Array.isArray(reportMap.trivy.Results)) {
+             reportMap.trivy.Results.forEach((res: any) => {
+                 if (res.Vulnerabilities) {
+                     res.Vulnerabilities.forEach((v: any) => {
+                         const sev = (v.Severity || "").toUpperCase();
+                         if (sev === "CRITICAL") vulnCritical++;
+                         else if (sev === "HIGH") vulnHigh++;
+                         else if (sev === "MEDIUM") vulnMedium++;
+                         else if (sev === "LOW") vulnLow++;
+                     });
+                 }
+             });
+         }
+
+         // Parse Semgrep
+         if (reportMap.semgrep && Array.isArray(reportMap.semgrep.results)) {
+             reportMap.semgrep.results.forEach((issue: any) => {
+                 const sev = (issue.extra?.severity || "").toUpperCase();
+                 if (sev === "ERROR") vulnHigh++;
+                 else if (sev === "WARNING") vulnMedium++;
+                 else vulnLow++;
+             });
+         }
+
+         // Parse Gitleaks
+         if (reportMap.gitleaks && Array.isArray(reportMap.gitleaks)) {
+             vulnCritical += reportMap.gitleaks.length;
+         }
+
          // Find scan by pipelineId
          const scan = await prisma.scanHistory.findUnique({ where: { pipelineId } });
          if (scan) {
              await prisma.scanHistory.update({
                  where: { id: scan.id },
                  data: { 
-                     reportJson: reportMap
+                     reportJson: reportMap,
+                     vulnCritical,
+                     vulnHigh,
+                     vulnMedium,
+                     vulnLow
                  }
              });
-             console.log(`[Artifacts] Saved reports to DB for Scan ${scan.id}`);
+             console.log(`[Artifacts] Saved reports and vuln counts to DB for Scan ${scan.id}`);
          }
       }
   
@@ -391,7 +445,8 @@ async function pollRunningScans() {
 
     // console.log(`[Poller] Checking ${runningScans.length} running scans...`);
 
-    const TIMEOUT_MS = 60 * 60 * 1000; // 60 Minutes
+    // [MODIFIED] Increased from 60 mins to 180 mins to account for Single Runner backlog pending queue
+    const TIMEOUT_MS = 180 * 60 * 1000; // 180 Minutes
 
     for (const scan of runningScans) {
         if (!scan.pipelineId) continue;
@@ -410,7 +465,7 @@ async function pollRunningScans() {
                         scanLogs: appendLog(scan.scanLogs, "FAILED", "Job timed out (Zombie Detection)")
                     }
                 });
-                continue; // Skip GitLab check if we killed it
+                continue; 
             }
         }
         
@@ -422,8 +477,7 @@ async function pollRunningScans() {
                 timeout: 5000, 
             });
 
-            // 2. [NEW] Fetch Pipeline Jobs (Stages)
-            // We fetch the jobs to visualize the stepper (Build -> Test -> Scan, etc.)
+            // Fetch Pipeline Jobs (Stages)
             let pipelineJobs = [];
             try {
                 const jobsRes = await axios.get(
@@ -463,6 +517,16 @@ async function pollRunningScans() {
                  });
             }
 
+            const currentDbState = await prisma.scanHistory.findUnique({
+              where: { id: scan.id },
+              select: { status: true }
+            });
+            
+            if (currentDbState && ["SUCCESS", "FAILED", "FAILED_SECURITY", "CANCELLED", "CANCELED"].includes(currentDbState.status)) {
+               console.log(`[Poller] Scan ${scan.id} already completed via Webhook (${currentDbState.status}). Skipping poller update.`);
+               continue;
+            }
+
             if (newStatus && newStatus !== "RUNNING") {
                  console.log(`[Poller] Scan ${scan.id} (Pipeline ${scan.pipelineId}) changed to ${newStatus}`);
                  
@@ -484,7 +548,6 @@ async function pollRunningScans() {
                  });
             }
         } catch (error: unknown) {
-            // [FIX]: Handle 404 (Deleted) and 401 (Unauthorized/Token Invalid)
             if (axios.isAxiosError(error) && error.response) {
                 const status = error.response.status;
                 if (status === 404) {

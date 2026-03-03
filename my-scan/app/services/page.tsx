@@ -320,7 +320,14 @@ export default function ServicesPage() {
                          </span>
                          {latestScan && (
                            <>
-                             <StatusBadge status={latestScan.status} />
+                           <StatusBadge 
+                             status={
+                               latestScan.status === "SUCCESS" && 
+                               (latestScan.vulnCritical > 0 || latestScan.vulnHigh > 0) 
+                                 ? "FAILED_SECURITY" 
+                                 : latestScan.status
+                             } 
+                           />
                              <ScanModeBadge mode={latestScan.scanMode} />
                            </>
                          )}

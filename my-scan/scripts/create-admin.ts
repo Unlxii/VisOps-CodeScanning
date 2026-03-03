@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 
@@ -12,7 +13,7 @@ async function main() {
   try {
     // 1. Check how many admins already exist
     const adminCount = await prisma.user.count({
-      where: { role: "ADMIN" }
+      where: { role: "SUPERADMIN" }
     });
 
     const existingUser = await prisma.user.findUnique({
@@ -22,7 +23,7 @@ async function main() {
     // 2. Strict 1-Superadmin Enforcement Logic
     if (adminCount > 0) {
       // If an admin exists, we ONLY allow password resets for the *existing* admin.
-      if (existingUser && existingUser.role === "ADMIN") {
+      if (existingUser && existingUser.role === "SUPERADMIN") {
         await prisma.user.update({
           where: { email },
           data: { password: hashedPassword }
@@ -51,7 +52,7 @@ async function main() {
       await prisma.user.update({
         where: { email },
         data: {
-          role: "ADMIN",
+          role: "SUPERADMIN",
           password: hashedPassword,
         },
       });
@@ -67,7 +68,7 @@ async function main() {
         data: {
           email,
           name: "UNLXI Administrator",
-          role: "ADMIN",
+          role: "SUPERADMIN",
           password: hashedPassword,
           status: "ACTIVE",
           isSetupComplete: true,

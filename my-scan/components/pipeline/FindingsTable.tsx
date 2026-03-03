@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useMemo, useEffect } from "react";
-import { Search, ShieldAlert, User, Mail } from "lucide-react";
+import { Search, ShieldAlert, User, Mail, Filter } from "lucide-react";
 import { Severity, Vulnerability } from "./types";
 import { SeverityBadge, ToolBadge } from "./StatusBadges";
 
@@ -20,13 +20,22 @@ export const FindingsTable = ({
   totalFindings,
 }: FindingsTableProps) => {
   const [filter, setFilter] = useState<Severity | "all">("all");
+  const [toolFilter, setToolFilter] = useState<"all" | "Trivy" | "Semgrep" | "Gitleaks">("all");
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Get unique tools from findings
+  const availableTools = useMemo(() => {
+    const tools = new Set(findings.map(f => f.sourceTool || "Unknown"));
+    return Array.from(tools);
+  }, [findings]);
 
   const filteredFindings = useMemo(() => {
     if (!findings) return [];
-    if (filter === "all") return findings;
-    return findings.filter((f) => f.severity === filter);
-  }, [findings, filter]);
+    let result = findings;
+    if (filter !== "all") result = result.filter((f) => f.severity === filter);
+    if (toolFilter !== "all") result = result.filter((f) => f.sourceTool === toolFilter);
+    return result;
+  }, [findings, filter, toolFilter]);
 
   const paginatedFindings = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -35,31 +44,59 @@ export const FindingsTable = ({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter]);
+  }, [filter, toolFilter]);
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 flex flex-col h-full min-h-[500px]">
-      <div className="p-4 border-b border-gray-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Search className="w-4 h-4 text-gray-500 dark:text-slate-400" />
-          <h3 className="font-semibold text-gray-800 dark:text-white">
-            Findings ({filteredFindings.length})
-          </h3>
+      <div className="p-4 border-b border-gray-200 dark:border-slate-800 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Search className="w-4 h-4 text-gray-500 dark:text-slate-400" />
+            <h3 className="font-semibold text-gray-800 dark:text-white">
+              Findings ({filteredFindings.length})
+            </h3>
+          </div>
+          <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-lg">
+            {(["all", "critical", "high", "medium", "low"] as const).map(
+              (lvl) => (
+                <button
+                  key={lvl}
+                  onClick={() => setFilter(lvl)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${
+                    filter === lvl ? "bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-slate-400"
+                  }`}
+                >
+                  {lvl}
+                </button>
+              )
+            )}
+          </div>
         </div>
-        <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-lg">
-          {(["all", "critical", "high", "medium", "low"] as const).map(
-            (lvl) => (
-              <button
-                key={lvl}
-                onClick={() => setFilter(lvl)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${
-                  filter === lvl ? "bg-white dark:bg-slate-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-slate-400"
-                }`}
-              >
-                {lvl}
-              </button>
-            )
-          )}
+        {/* Tool Filter */}
+        <div className="flex items-center gap-2">
+          <Filter className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500" />
+          <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">Scanner:</span>
+          <div className="flex gap-1.5">
+            {(["all", "Trivy", "Semgrep", "Gitleaks"] as const).map((tool) => {
+              const count = tool === "all" ? findings.length : findings.filter(f => f.sourceTool === tool).length;
+              const isActive = toolFilter === tool;
+              const toolColors: Record<string, string> = {
+                all: isActive ? "bg-slate-700 text-white dark:bg-slate-500" : "bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400",
+                Trivy: isActive ? "bg-cyan-600 text-white" : "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/30",
+                Semgrep: isActive ? "bg-orange-600 text-white" : "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800/30",
+                Gitleaks: isActive ? "bg-purple-600 text-white" : "bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800/30",
+              };
+              return (
+                <button
+                  key={tool}
+                  onClick={() => setToolFilter(tool)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-full transition-all ${toolColors[tool]} hover:opacity-80`}
+                >
+                  {tool === "all" ? "All" : tool} {count > 0 && <span className="opacity-70">({count})</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -187,7 +224,7 @@ export const FindingsTable = ({
             <button
               onClick={() => setCurrentPage(1)}
               disabled={currentPage === 1}
-              className="p-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-white rounded border border-transparent hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="p-2 text-xs text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700 rounded border border-transparent hover:border-gray-300 dark:hover:border-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               title="First page"
             >
               <svg
@@ -207,7 +244,7 @@ export const FindingsTable = ({
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-slate-800 transition-colors"
             >
               Previous
             </button>
@@ -232,7 +269,7 @@ export const FindingsTable = ({
                 .map((page, idx, arr) => (
                   <React.Fragment key={page}>
                     {idx > 0 && arr[idx - 1] !== page - 1 && (
-                      <span className="px-2 text-gray-400 select-none">
+                      <span className="px-2 text-gray-400 dark:text-slate-500 select-none">
                         •••
                       </span>
                     )}
@@ -240,8 +277,8 @@ export const FindingsTable = ({
                       onClick={() => setCurrentPage(page)}
                       className={`min-w-[32px] px-2 py-1.5 text-xs font-medium rounded transition-all ${
                         currentPage === page
-                          ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-100"
-                          : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                          ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-100 dark:ring-blue-900"
+                          : "text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-gray-400 dark:hover:border-slate-500"
                       }`}
                     >
                       {page}
@@ -250,9 +287,9 @@ export const FindingsTable = ({
                 ))}
             </div>
 
-            <div className="sm:hidden flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded">
+            <div className="sm:hidden flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded">
               <span>{currentPage}</span>
-              <span className="text-gray-400">/</span>
+              <span className="text-gray-400 dark:text-slate-500">/</span>
               <span>{Math.ceil(filteredFindings.length / ITEMS_PER_PAGE)}</span>
             </div>
 
@@ -269,7 +306,7 @@ export const FindingsTable = ({
                 currentPage ===
                 Math.ceil(filteredFindings.length / ITEMS_PER_PAGE)
               }
-              className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-slate-800 transition-colors"
             >
               Next
             </button>
@@ -283,7 +320,7 @@ export const FindingsTable = ({
                 currentPage ===
                 Math.ceil(filteredFindings.length / ITEMS_PER_PAGE)
               }
-              className="p-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-white rounded border border-transparent hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="p-2 text-xs text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700 rounded border border-transparent hover:border-gray-300 dark:hover:border-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               title="Last page"
             >
               <svg

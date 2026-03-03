@@ -46,10 +46,12 @@ export const LogsPanel = ({
              <div key={i} className="flex gap-2 border-b border-gray-800 pb-1 mb-1 last:border-0">
                 <span className="text-gray-500 w-32 shrink-0">{new Date(l.timestamp).toLocaleTimeString()}</span>
                 <span className={`font-bold ${
-                    l.status === 'SUCCESS' ? 'text-emerald-400' : 
+                    (l.status === 'SUCCESS' && totalFindings === 0) ? 'text-emerald-400' : 
+                    (l.status === 'SUCCESS' && totalFindings > 0) ? 'text-red-400' : 
                     l.status === 'FAILED' ? 'text-red-400' : 
+                    l.status === 'FAILED_SECURITY' ? 'text-red-400' : 
                     'text-blue-400'
-                }`}>[{l.status}]</span>
+                }`}>[{l.status === 'SUCCESS' && totalFindings > 0 ? 'FAILED_SECURITY' : l.status}]</span>
                 <span>{l.message || ''}</span>
              </div>
            ))
@@ -70,8 +72,11 @@ export const LogsPanel = ({
         ) : isSuccess ? (
           <div className="space-y-1">
             <div>Pipeline: {pipelineId || scanId}</div>
-            <div>Status: SUCCESS</div>
-            <div>Total findings: {totalFindings}</div>
+            <div>Status: <span className="text-red-400 font-bold">FAILED_SECURITY</span></div>
+            <div className="flex items-center gap-2 text-red-400">
+              <ShieldAlert size={14} />
+              <span>Vulnerabilities detected: {totalFindings}</span>
+            </div>
             <div>Duration: {scanDuration || "N/A"}</div>
           </div>
         ) : (

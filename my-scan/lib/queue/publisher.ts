@@ -17,7 +17,6 @@ async function getChannel() {
   if (channel) return channel;
 
   try {
-    // ✅ ไม้ตาย: ใช้ 'as any' เพื่อบังคับให้ TypeScript ยอมรับค่าที่ได้
     console.log("[RabbitMQ] Connecting to:", RABBITMQ_URL);
     const conn = (await amqp.connect(RABBITMQ_URL)) as any;
     const ch = (await conn.createChannel()) as any;
@@ -53,9 +52,19 @@ async function getChannel() {
     });
 
     conn.on("close", () => {
-      console.warn("[RabbitMQ] Connection closed");
+      console.warn("[RabbitMQ] Connection closed.");
       channel = null;
       connection = null;
+    });
+
+    ch.on("error", (err: any) => {
+      console.error("[RabbitMQ] Channel error:", err);
+      channel = null;
+    });
+
+    ch.on("close", () => {
+      console.warn("[RabbitMQ] Channel closed.");
+      channel = null;
     });
 
     return ch;

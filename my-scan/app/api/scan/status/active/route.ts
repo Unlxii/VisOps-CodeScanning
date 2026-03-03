@@ -43,6 +43,7 @@ export async function GET(req: Request) {
           select: {
             serviceName: true,
             imageName: true,
+            averageDuration: true,
             group: {
               select: {
                 groupName: true,

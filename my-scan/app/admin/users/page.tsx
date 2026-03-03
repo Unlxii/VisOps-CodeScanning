@@ -23,7 +23,7 @@ interface User {
   id: string;
   name: string | null;
   email: string | null;
-  role: "ADMIN" | "user";
+  role: "ADMIN" | "SUPERADMIN" | "user";
   status: "ACTIVE" | "PENDING" | "REJECTED";
   image: string | null;
   createdAt: string;
@@ -71,6 +71,7 @@ export default function AdminUsersPage() {
       if (!res.ok) throw new Error("Failed to update quota");
       mutate(); // Refresh user list
       setEditingQuotaId(null);
+      alert(`✅ Successfully updated user quota to ${newQuota}`);
     } catch (err) {
       console.error("Quota update failed:", err);
     }
@@ -93,8 +94,8 @@ export default function AdminUsersPage() {
   
   // Stats
   const userList = Array.isArray(users) ? users : [];
-  const totalAdmins = userList.filter(u => u.role === "ADMIN").length || 0;
-  const totalStandard = userList.filter(u => u.role !== "ADMIN").length || 0;
+  const totalAdmins = userList.filter(u => u.role === "ADMIN" || u.role === "SUPERADMIN").length || 0;
+  const totalStandard = userList.filter(u => u.role !== "ADMIN" && u.role !== "SUPERADMIN").length || 0;
 
   // Handlers
   const handleSort = (field: keyof User | "stats.projects") => {
@@ -142,8 +143,8 @@ export default function AdminUsersPage() {
 
     // 2. Tab Filter
     if (activeTab === "ALL") return true;
-    if (activeTab === "ADMIN") return user.role === "ADMIN";
-    if (activeTab === "USER") return user.role !== "ADMIN" && user.status !== "PENDING" && user.status !== "REJECTED";
+    if (activeTab === "ADMIN") return user.role === "ADMIN" || user.role === "SUPERADMIN";
+    if (activeTab === "USER") return user.role !== "ADMIN" && user.role !== "SUPERADMIN" && user.status !== "PENDING" && user.status !== "REJECTED";
     if (activeTab === "PENDING") return user.status === "PENDING" || user.status === "REJECTED";
 
     return true;
@@ -167,7 +168,7 @@ export default function AdminUsersPage() {
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  if (session?.user.role !== "admin") {
+  if (session?.user.role !== "ADMIN" && session?.user.role !== "SUPERADMIN") {
       return <div className="p-8 text-center text-red-500">Unauthorized Access</div>;
   }
 
@@ -269,7 +270,7 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${
-                         user.role === 'ADMIN' 
+                         (user.role === 'ADMIN' || user.role === 'SUPERADMIN') 
                          ? 'bg-gray-100 border-gray-300 text-gray-800 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200' 
                          : 'bg-white border-gray-200 text-gray-600 dark:bg-transparent dark:border-gray-700 dark:text-gray-400'
                       }`}>
@@ -332,7 +333,7 @@ export default function AdminUsersPage() {
                             <div className="flex items-center justify-end gap-2 action-menu-container relative">
 
                               {/* Dropdown Menu for Actions */}
-                              {user.role === 'ADMIN' || user.id === session?.user.id ? (
+                              {(user.role === 'ADMIN' || user.role === 'SUPERADMIN') || user.id === session?.user.id ? (
                                 // Invisible placeholder to keep layout balanced
                                 <div className="w-[30px] h-[30px] invisible" aria-hidden="true" />
                               ) : (

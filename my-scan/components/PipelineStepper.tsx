@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Loader2, X, Circle, Clock, Rocket } from "lucide-react";
+import { Check, Loader2, X, Circle, Clock, Rocket, AlertTriangle, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import {
@@ -25,14 +25,28 @@ interface PipelineStepperProps {
   status: string;
   scanMode?: string;
   imagePushed?: boolean;
+  counts?: { critical: number; high: number; medium: number; low: number };
 }
 
 export default function PipelineStepper({ 
   jobs, 
   status, 
   scanMode, 
-  imagePushed
+  imagePushed,
+  counts
 }: PipelineStepperProps) {
+
+  // Determine security stage severity level
+  const isSecurityStage = (stage: string) => 
+    stage === "security_audit" || stage === "security-scan";
+  
+  const getSecuritySeverity = () => {
+    if (!counts) return "clean";
+    if (counts.critical > 0) return "critical";  // red
+    if (counts.high > 0 || counts.medium > 0 || counts.low > 0) return "warning"; // yellow
+    return "clean"; // green
+  };
+  const securitySeverity = getSecuritySeverity();
 
   // Determine stages to show
   let uniqueStages: string[] = [];
@@ -160,13 +174,24 @@ export default function PipelineStepper({
             const isFailed = stageStatus === 'failed';
             const isPending = stageStatus === 'pending' || stageStatus === 'canceled' || stageStatus === 'created' || stageStatus === 'manual';
 
+            // Security stage special coloring
+            const isSecurity = isSecurityStage(stage);
+            const securityCompleted = isSecurity && isCompleted;
+
             const totalDuration = stageJobs.reduce((acc, j) => acc + (j.duration || 0), 0);
             
             // Determine connector color
             const isLast = index === uniqueStages.length - 1;
-            const connectorColor = isCompleted 
+            let connectorColor = isCompleted 
                 ? "bg-emerald-500" 
                 : "bg-slate-200 dark:bg-slate-700";
+            
+            // Override connector for security stage
+            if (securityCompleted && securitySeverity === "critical") {
+                connectorColor = "bg-red-500";
+            } else if (securityCompleted && securitySeverity === "warning") {
+                connectorColor = "bg-amber-500";
+            }
 
             return (
               <div key={stage} className="relative flex flex-col items-center flex-1 group min-w-0">
@@ -183,6 +208,12 @@ export default function PipelineStepper({
                 {/* Status Point */}
                 <div className={cn(
                   "relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-4 transition-all duration-300 bg-white dark:bg-slate-900",
+                  // Security stage color override
+                  securityCompleted && securitySeverity === "critical" 
+                    ? "border-red-500 text-red-500 bg-red-50 dark:bg-red-900/20 shadow-lg shadow-red-500/20" :
+                  securityCompleted && securitySeverity === "warning" 
+                    ? "border-amber-500 text-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-lg shadow-amber-500/20" :
+                  // Normal colors
                   isCompleted ? (isRelease ? "border-emerald-500 text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20" : "border-emerald-500 text-emerald-500") :
                   isRunning ? "border-blue-500 text-blue-500 scale-110 shadow-lg shadow-blue-500/20" :
                   isFailed ? "border-red-500 text-red-500" :
@@ -190,6 +221,10 @@ export default function PipelineStepper({
                 )}>
                   {isRelease ? (
                       <Rocket size={18} className={cn(isCompleted && "text-emerald-600 dark:text-emerald-400")} />
+                  ) : securityCompleted && securitySeverity === "critical" ? (
+                      <ShieldAlert size={18} className="text-red-600 dark:text-red-400" />
+                  ) : securityCompleted && securitySeverity === "warning" ? (
+                      <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400" />
                   ) : (
                       <>
                           {isCompleted && <Check size={18} strokeWidth={3} />}
@@ -204,6 +239,8 @@ export default function PipelineStepper({
                 <div className="flex flex-col items-center mt-3 gap-1 w-full px-1">
                   <span className={cn(
                     "text-[10px] md:text-xs font-bold uppercase tracking-wider text-center transition-colors truncate w-full",
+                    securityCompleted && securitySeverity === "critical" ? "text-red-600 dark:text-red-400" :
+                    securityCompleted && securitySeverity === "warning" ? "text-amber-600 dark:text-amber-400" :
                     isCompleted ? "text-slate-900 dark:text-white" :
                     isRunning ? "text-blue-600 dark:text-blue-400" :
                     isFailed ? "text-red-600 dark:text-red-400" :

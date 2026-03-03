@@ -9,7 +9,6 @@ stages:
   - cleanup
 
 workflow:
-  # แสดงชื่อคนที่สั่งรัน (User) ใน GitLab UI
   name: "[$SCAN_MODE] $PROJECT_NAME ($USER_TAG) by $FRONTEND_USER"
   rules:
     - if: $CI_PIPELINE_SOURCE == "api"
@@ -22,11 +21,11 @@ workflow:
 variables:
   # --- TOOL VERSIONS ---
   GITLEAKS_VERSION: "v8.18.4"
-  SEMGREP_VERSION: "latest"
+  SEMGREP_VERSION: "1.66.0"
   TRIVY_VERSION: "0.53.0"
   KANIKO_VERSION: "v1.23.1-debug"
   CRANE_VERSION: "debug"
-  MAVEN_VERSION: "3.9-eclipse-temurin-21"
+  MAVEN_VERSION: "3.9-eclipse-temurin-25"
   GRADLE_VERSION: "8-jdk21"
   NODE_VERSION: "20-alpine"
   GO_VERSION: "1.22-alpine"
@@ -52,14 +51,12 @@ variables:
   GRADLE_USER_HOME: ".gradle"
 
 # 0. Nightly Maintenance (Cache Warmer)
-# ทำหน้าที่: "User คนแรกของวัน" (รันโดยระบบตามตารางเวลา)
 update_trivy_db:
   stage: maintenance
   image:
     name: aquasec/trivy:$TRIVY_VERSION
     entrypoint: [""]
   rules:
-    # รันเฉพาะตอนตั้งเวลา (Schedule) หรือกด Manual เองเท่านั้น
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
       when: manual
@@ -67,12 +64,10 @@ update_trivy_db:
   cache:
     key: trivy-global-cache
     paths: [.trivycache/]
-    # สำคัญ: โหมดนี้อนุญาตให้ "อัปเดต" แคชกลับขึ้นไปได้ (Push)
     policy: push
   script:
     - echo "System Maintenance- Downloading latest Trivy DB..."
     - mkdir -p .trivycache/
-    # สั่งดาวน์โหลด DB ใหม่ล่าสุด เก็บลงโฟลเดอร์ Cache
     - trivy image --download-db-only --cache-dir .trivycache/
     - echo "DB Updated. Cache will be pushed to server."
   artifacts:
@@ -99,14 +94,15 @@ fetch_and_detect:
              "$BACKEND_HOST_URL/api/webhook" -O - || echo "Webhook Failed"
       fi
 
-    # Clone
+    # Clone target repo (destroy runner's own .git to prevent artifact bloat)
+    - rm -rf .git
     - if [ -z "$USER_REPO_URL" ]; then echo "USER_REPO_URL is missing"; exit 1; fi
     - |
       if [ -n "$GIT_USERNAME" ] && [ -n "$GIT_TOKEN" ]; then
         CLEAN_URL=$(echo "$USER_REPO_URL" | sed -e 's|^https://||' -e 's|^http://||');
-        git clone --depth 1 "https://${GIT_USERNAME}:${GIT_TOKEN}@${CLEAN_URL}" project_temp;
+        git clone "https://${GIT_USERNAME}:${GIT_TOKEN}@${CLEAN_URL}" project_temp;
       else
-        git clone --depth 1 "$USER_REPO_URL" project_temp;
+        git clone "$USER_REPO_URL" project_temp;
       fi
     - rm -rf project_temp/.git
     - cp -a project_temp/. .
@@ -127,7 +123,7 @@ fetch_and_detect:
          if [ ! -d "$loc" ]; then continue; fi
          clean_loc=$(echo "$loc" | sed 's|^\./||;s|/$||')
          [ -z "$clean_loc" ] && clean_loc="."
-         
+
          if [ -f "$clean_loc/pom.xml" ]; then STACK="java-maven"; DETECTED_PATH="$clean_loc"; break;
          elif [ -f "$clean_loc/build.gradle" ] || [ -f "$clean_loc/build.gradle.kts" ]; then STACK="java-gradle"; DETECTED_PATH="$clean_loc"; break;
          elif [ -f "$clean_loc/go.mod" ]; then STACK="go"; DETECTED_PATH="$clean_loc"; break;
@@ -144,7 +140,6 @@ fetch_and_detect:
 
       echo "Stack: $STACK | Context: $DETECTED_PATH | Mode: $SCAN_MODE"
 
-      # Export Env
       echo "CONTEXT_PATH=$DETECTED_PATH" >> build.env
       echo "FINAL_IMAGE_NAME=$FINAL_IMAGE_NAME" >> build.env
       echo "STACK=$STACK" >> build.env
@@ -155,8 +150,9 @@ fetch_and_detect:
     paths: [".", "*.json"]
     reports:
       dotenv: build.env
-    exclude: [".git/**/*", "**/node_modules/**/*"]
+    exclude: [".git/**/*", "**/.git/**/*", "**/node_modules/**/*", "**/pgdata/**/*"]
     expire_in: 1 hour
+
 
 # 2. Security Audits (ALWAYS RUN)
 
@@ -166,18 +162,22 @@ gitleaks_scan:
     name: zricethezav/gitleaks:$GITLEAKS_VERSION
     entrypoint: [""]
   variables: { GIT_STRATEGY: none }
-  needs: []
+  needs: ["fetch_and_detect"]
   script:
     - echo "Gitleaks Scanning..."
-    - apk add --no-cache git curl
+    - apk add --no-cache git curl || true
     - |
       if [ -n "$GIT_USERNAME" ] && [ -n "$GIT_TOKEN" ]; then
          CLEAN=$(echo "$USER_REPO_URL" | sed -e 's|^https://||' -e 's|^http://||');
-         git clone "https://${GIT_USERNAME}:${GIT_TOKEN}@${CLEAN}" .;
+         git clone "https://${GIT_USERNAME}:${GIT_TOKEN}@${CLEAN}" temp_git;
       else
-         git clone "$USER_REPO_URL" .;
+         git clone "$USER_REPO_URL" temp_git;
       fi
+      mv temp_git/.git .
+      rm -rf temp_git
+      git reset --mixed || true
     - gitleaks detect --source . -v --report-path gitleaks-report.json --exit-code 0
+
     # Webhook: Send Gitleaks Report
     - |
       if [ "$ENABLE_WEBHOOKS" = "true" ]; then
@@ -186,8 +186,7 @@ gitleaks_scan:
           SECRETS_COUNT=$(cat gitleaks-report.json | grep -c '"Description":' || echo 0)
         fi
         echo "Gitleaks found $SECRETS_COUNT secrets"
-        
-        # Send report file directly
+
         if [ -s gitleaks-report.json ]; then
           curl -X POST \
             -F "pipelineId=$CI_PIPELINE_ID" \
@@ -209,22 +208,33 @@ semgrep_scan:
   stage: security_audit
   image: returntocorp/semgrep:$SEMGREP_VERSION
   needs: ["fetch_and_detect"]
+  variables: { GIT_STRATEGY: none }
   script:
-    # Added --exclude flags to prevent scanning large directories (node_modules, dist, etc.)
-    # This fixes the "exited with -9" (OOM) error.
+    - apk add --no-cache git curl || true
+    - |
+      if [ ! -d ".git" ]; then
+        if [ -n "$GIT_USERNAME" ] && [ -n "$GIT_TOKEN" ]; then
+          CLEAN_URL=$(echo "$USER_REPO_URL" | sed -e 's|^https://||' -e 's|^http://||');
+          git clone "https://${GIT_USERNAME}:${GIT_TOKEN}@${CLEAN_URL}" temp_git;
+        else
+          git clone "$USER_REPO_URL" temp_git;
+        fi
+        mv temp_git/.git .
+        rm -rf temp_git
+        git reset --mixed || true
+      fi
+
     - semgrep scan --config=p/ci --json --output=semgrep-report.json --metrics=off --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='vendor' --exclude='.git' --exclude='**/*.min.js' "$CONTEXT_PATH"
-    
+
     # Webhook: Send Semgrep Report
     - |
       if [ "$ENABLE_WEBHOOKS" = "true" ]; then
-        apk add --no-cache curl
         FINDINGS_COUNT=0
         if [ -s semgrep-report.json ]; then
           FINDINGS_COUNT=$(cat semgrep-report.json | grep -c '"check_id":' || echo 0)
         fi
         echo "Semgrep found $FINDINGS_COUNT code issues"
-        
-        # Send report file directly
+
         if [ -s semgrep-report.json ]; then
           curl -X POST \
             -F "pipelineId=$CI_PIPELINE_ID" \
@@ -243,72 +253,111 @@ semgrep_scan:
   artifacts: { paths: [semgrep-report.json], when: always }
 
 
-
 # 3. Compile (SKIP IF SCAN_ONLY)
+
+# [FIX 413] Maven: archive ONLY the compiled JAR into __compiled_bin/ (not the full repo)
 compile_java_maven:
   stage: compile
   image: maven:$MAVEN_VERSION
   needs: ["fetch_and_detect"]
+  variables: { GIT_STRATEGY: none }
   cache: { key: maven-$CI_PROJECT_ID, paths: [.m2/repository] }
   script:
+    - mkdir -p .m2/repository/
     - if [ "$SCAN_MODE" == "SCAN_ONLY" ]; then echo "Skipped (Scan Only)"; exit 0; fi
     - if [ "$STACK" != "java-maven" ]; then exit 0; fi
+    # Install Node.js via binary (avoids 4-min apt-get install with hundreds of unneeded packages)
+    - if ! command -v node &> /dev/null; then curl -fsSL https://nodejs.org/dist/v20.11.1/node-v20.11.1-linux-x64.tar.gz | tar -xz -C /usr/local --strip-components=1 || true; fi
     - cd "$CONTEXT_PATH"
     - mvn clean package -DskipTests -B -q
     - JAR=$(find target -name "*.jar" -not -name "*-sources.jar" -type f | head -1)
-    - if [ -n "$JAR" ]; then echo "$CONTEXT_PATH/$JAR" > ../.jar_path; fi
-  artifacts: { paths: ["."], expire_in: 1h }
+    - if [ -n "$JAR" ]; then mkdir -p $CI_PROJECT_DIR/__compiled_bin; cp "$JAR" $CI_PROJECT_DIR/__compiled_bin/; echo "$CONTEXT_PATH/$(basename $JAR)" > $CI_PROJECT_DIR/.jar_path; fi
+  cache:
+    - key: maven-$CI_PROJECT_ID
+      paths: [.m2/repository]
+    - key: compiled-jar-$CI_PIPELINE_ID
+      paths: [__compiled_bin/]
+      policy: push
+  artifacts:
+    paths: [".jar_path"]
+    expire_in: 1h
 
+# [FIX 413] Gradle: archive ONLY the compiled JAR into __compiled_bin/ (not the full repo)
 compile_java_gradle:
   stage: compile
   image: gradle:$GRADLE_VERSION
   needs: ["fetch_and_detect"]
+  variables: { GIT_STRATEGY: none }
   cache: { key: gradle-$CI_PROJECT_ID, paths: [.gradle/] }
   script:
+    - mkdir -p .gradle/
     - if [ "$SCAN_MODE" == "SCAN_ONLY" ]; then echo "Skipped (Scan Only)"; exit 0; fi
     - if [ "$STACK" != "java-gradle" ]; then exit 0; fi
     - cd "$CONTEXT_PATH"
     - gradle clean build -x test --no-daemon -q
     - JAR=$(find build/libs -name "*.jar" -not -name "*-plain.jar" -type f | head -1)
-    - if [ -n "$JAR" ]; then echo "$CONTEXT_PATH/$JAR" > ../.jar_path; fi
-  artifacts: { paths: ["."], expire_in: 1h }
+    - if [ -n "$JAR" ]; then mkdir -p $CI_PROJECT_DIR/__compiled_bin; cp "$JAR" $CI_PROJECT_DIR/__compiled_bin/; echo "$CONTEXT_PATH/$(basename $JAR)" > $CI_PROJECT_DIR/.jar_path; fi
+  cache:
+    - key: gradle-$CI_PROJECT_ID
+      paths: [.gradle/]
+    - key: compiled-jar-$CI_PIPELINE_ID
+      paths: [__compiled_bin/]
+      policy: push
+  artifacts:
+    paths: [".jar_path"]
+    expire_in: 1h
 
 compile_go:
   stage: compile
   image: golang:$GO_VERSION
   needs: ["fetch_and_detect"]
+  variables: { GIT_STRATEGY: none }
   cache: { key: go-$CI_PROJECT_ID, paths: [.go/pkg/mod/] }
   script:
+    - mkdir -p $CI_PROJECT_DIR/.go/pkg/mod/
     - if [ "$SCAN_MODE" == "SCAN_ONLY" ]; then echo "Skipped (Scan Only)"; exit 0; fi
     - if [ "$STACK" != "go" ]; then exit 0; fi
     - export GOPATH="$CI_PROJECT_DIR/.go"
     - cd "$CONTEXT_PATH"
     - go mod download
     - CGO_ENABLED=0 GOOS=linux go build -o app .
-  artifacts: { paths: ["."], expire_in: 1h }
+  artifacts:
+    paths: ["."]
+    exclude: ["**/node_modules/**/*", "**/.git/**/*", "**/pgdata/**/*", "$GOPATH/**/*"]
+    expire_in: 1h
 
 compile_node:
   stage: compile
   image: node:$NODE_VERSION
   needs: ["fetch_and_detect"]
+  variables: { GIT_STRATEGY: none }
   cache: { key: node-$CI_PROJECT_ID, paths: [node_modules/] }
   script:
+    - mkdir -p node_modules/
     - if [ "$SCAN_MODE" == "SCAN_ONLY" ]; then echo "Skipped (Scan Only)"; exit 0; fi
     - if [ "$STACK" != "node" ]; then exit 0; fi
     - cd "$CONTEXT_PATH"
     - if [ -f "yarn.lock" ]; then yarn install --frozen-lockfile --silent; else npm ci --silent || npm install --silent; fi
     - if grep -q '"build"' package.json; then npm run build || true; fi
-  artifacts: { paths: ["."], expire_in: 1h }
+  artifacts:
+    paths: ["."]
+    exclude: ["**/node_modules/**/*", "**/.git/**/*", "**/pgdata/**/*"]
+    expire_in: 1h
 
 compile_python:
   stage: compile
   image: python:$PYTHON_VERSION
   needs: ["fetch_and_detect"]
+  variables: { GIT_STRATEGY: none }
   script:
     - if [ "$SCAN_MODE" == "SCAN_ONLY" ]; then echo "Skipped (Scan Only)"; exit 0; fi
     - if [ "$STACK" != "python" ]; then exit 0; fi
     - echo "Python detected."
-  artifacts: { paths: ["."], expire_in: 1h }
+  artifacts:
+    paths: ["."]
+    exclude: ["**/node_modules/**/*", "**/.git/**/*", "**/pgdata/**/*"]
+    expire_in: 1h
+
 
 # 4. Build Docker Image (SKIP IF SCAN_ONLY)
 build_and_push:
@@ -329,13 +378,32 @@ build_and_push:
       optional: true
     - job: compile_python
       optional: true
+  cache:
+    - key: compiled-jar-$CI_PIPELINE_ID
+      paths: [__compiled_bin/]
+      policy: pull
   script:
     # --- CHECK MODE ---
     - if [ "$SCAN_MODE" == "SCAN_ONLY" ]; then echo "Build skipped (SCAN_ONLY mode selected)."; exit 0; fi
-
     - echo "Building Docker Image..."
     - if [ -z "$DOCKER_USER" ]; then echo "No Docker Creds"; exit 1; fi
     - if [ "$STACK" = "unknown" ]; then echo "Unknown stack, skipping build"; exit 0; fi
+
+    # --- RESTORE JAR from __compiled_bin/ to expected paths for existing Dockerfiles ---
+    - |
+      if [ -f ".jar_path" ]; then
+        JAR_ROOT_PATH=$(cat .jar_path)
+        JAR_BASENAME=$(basename "$JAR_ROOT_PATH")
+        if [ "$STACK" = "java-maven" ]; then
+          mkdir -p "$CONTEXT_PATH/target"
+          cp "__compiled_bin/$JAR_BASENAME" "$CONTEXT_PATH/target/$JAR_BASENAME" || true
+          cp "__compiled_bin/$JAR_BASENAME" "$CONTEXT_PATH/$JAR_BASENAME" || true
+        elif [ "$STACK" = "java-gradle" ]; then
+          mkdir -p "$CONTEXT_PATH/build/libs"
+          cp "__compiled_bin/$JAR_BASENAME" "$CONTEXT_PATH/build/libs/$JAR_BASENAME" || true
+          cp "__compiled_bin/$JAR_BASENAME" "$CONTEXT_PATH/$JAR_BASENAME" || true
+        fi
+      fi
 
     - DOCKERFILE_PATH="$CONTEXT_PATH/Dockerfile"
 
@@ -347,7 +415,7 @@ build_and_push:
         echo "Using existing $DOCKERFILE_PATH"
       elif [ "$CONTEXT_PATH" != "." ] && [ -f "Dockerfile" ]; then
         DOCKERFILE_PATH="Dockerfile"
-        CONTEXT_PATH="." 
+        CONTEXT_PATH="."
       else
         echo "Auto-generating Dockerfile for $STACK"
         if [ "$STACK" = "java-maven" ] || [ "$STACK" = "java-gradle" ]; then
@@ -365,12 +433,9 @@ build_and_push:
       fi
 
     - echo "Building:$FINAL_IMAGE_NAME:$TEMP_IMAGE_TAG"
-
     - mkdir -p /kaniko/.docker
     - AUTH_STR=$(echo -n "$DOCKER_USER:$DOCKER_PASSWORD" | base64 | tr -d '\n')
     - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"auth\":\"$AUTH_STR\"},\"index.docker.io\":{\"auth\":\"$AUTH_STR\"}}}" > /kaniko/.docker/config.json
-
-    # --- แก้ไขบรรทัดนี้ครับ (เอา cache=true ออก และเพิ่ม retry) ---
     - /kaniko/executor --context "$CI_PROJECT_DIR/$CONTEXT_PATH" --dockerfile "$CI_PROJECT_DIR/$DOCKERFILE_PATH" --destination "$FINAL_IMAGE_NAME:$TEMP_IMAGE_TAG" --snapshot-mode=redo --use-new-run --push-retry 3 --ignore-path=/product_uuid --ignore-path=/sys
 
 # 5. Container Scan (User Mode - Cached DB)
@@ -378,22 +443,19 @@ trivy_scan:
   stage: container_scan
   image:
     name: aquasec/trivy:$TRIVY_VERSION
-    entrypoint: [""] 
+    entrypoint: [""]
   needs: ["build_and_push", "fetch_and_detect"]
   variables:
     TRIVY_USERNAME: "$DOCKER_USER"
     TRIVY_PASSWORD: "$DOCKER_PASSWORD"
     TRIVY_AUTH_URL: "https://index.docker.io/v1/"
     TRIVY_CACHE_DIR: ".trivycache/"
-  
   cache:
     key: trivy-global-cache
     paths: [.trivycache/]
     policy: pull
-  
   script:
     - if [ "$SCAN_MODE" == "SCAN_ONLY" ]; then echo "Container Scan skipped (SCAN_ONLY mode)."; exit 0; fi
-
     - echo "Scanning:$FINAL_IMAGE_NAME:$TEMP_IMAGE_TAG"
     - apk add --no-cache curl
 
@@ -421,18 +483,16 @@ trivy_scan:
 push_to_hub:
   stage: release
   image:
-    name: alpine:latest # ✅ Changed from crane:debug to alpine
+    name: alpine:latest
     entrypoint: [""]
   needs: ["trivy_scan", "fetch_and_detect"]
   when: manual
   script:
     - if [ "$SCAN_MODE" == "SCAN_ONLY" ]; then echo "Release skipped (SCAN_ONLY mode)."; exit 0; fi
     - echo "Promoting to $USER_TAG"
-    # ✅ Install necessary tools manually
     - apk add --no-cache grep curl tar
     - CRITICALS=$(grep -o '"Severity":"CRITICAL"' trivy-report.json 2>/dev/null | wc -l || echo "0")
     - if [ "$CRITICALS" -gt 0 ]; then echo "BLOCKED:$CRITICALS Critical Vulns"; exit 1; fi
-    # ✅ Manually download and install Crane
     - curl -sL https://github.com/google/go-containerregistry/releases/download/v0.19.1/go-containerregistry_Linux_x86_64.tar.gz | tar -xz -C /usr/local/bin crane
     - crane auth login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD" index.docker.io
     - crane cp "$FINAL_IMAGE_NAME:$TEMP_IMAGE_TAG" "$FINAL_IMAGE_NAME:$USER_TAG"
@@ -441,6 +501,7 @@ push_to_hub:
       if [ "$ENABLE_WEBHOOKS" = "true" ]; then
          curl -X POST -H "Content-Type: application/json" -d "{\"pipelineId\": \"$CI_PIPELINE_ID\", \"status\": \"SUCCESS\", \"image\": \"$FINAL_IMAGE_NAME:$USER_TAG\"}" "$BACKEND_HOST_URL/api/webhook" || true
       fi
+
 cleanup_temp_image:
   stage: cleanup
   image:

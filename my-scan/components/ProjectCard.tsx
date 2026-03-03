@@ -153,7 +153,14 @@ export default function ProjectCard({
                   </p>
                   {service.scans[0] && (
                     <div className="flex flex-wrap gap-2 items-center">
-                      <StatusBadge status={service.scans[0].status} />
+                      <StatusBadge 
+                        status={
+                          service.scans[0].status === "SUCCESS" && 
+                          (service.scans[0].vulnCritical > 0 || service.scans[0].vulnHigh > 0) 
+                            ? "FAILED_SECURITY" 
+                            : service.scans[0].status
+                        } 
+                      />
                       <ScanModeBadge mode={service.scans[0].scanMode} />
                     </div>
                   )}

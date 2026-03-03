@@ -11,7 +11,7 @@ export async function POST(
     const resolved = await params;
     const scanId = resolved.id;
 
-    console.log(`🔄 Force Sync requested for Scan: ${scanId}`);
+    console.log(`Force Sync requested for Scan: ${scanId}`);
 
     // 1. หาข้อมูล Scan - support both id and pipelineId
     const scan = await prisma.scanHistory.findFirst({
@@ -30,16 +30,16 @@ export async function POST(
       );
     }
 
-    // 2. ถาม GitLab (Config)
-    const gitlabBaseUrl = process.env.GITLAB_API_URL || "http://10.10.184.118";
-    const projectId = process.env.GITLAB_PROJECT_ID || "141";
+  
+    const gitlabBaseUrl = process.env.GITLAB_API_URL;
+    const projectId = process.env.GITLAB_PROJECT_ID;
     const token = process.env.GITLAB_TOKEN;
     const agent = new https.Agent({ rejectUnauthorized: false });
 
     const targetUrl = `${gitlabBaseUrl}/api/v4/projects/${projectId}/pipelines/${scan.pipelineId}`;
-    console.log(`🚀 [Debug] Requesting URL: ${targetUrl}`);
+    console.log(` [Debug] Requesting URL: ${targetUrl}`);
     console.log(
-      `🔑 [Debug] Using Token: ${token ? "YES (Has Token)" : "NO (Missing Token)"}`,
+      ` [Debug] Using Token: ${token ? "YES (Has Token)" : "NO (Missing Token)"}`,
     );
 
     const gitlabRes = await axios.get(targetUrl, {
@@ -48,7 +48,7 @@ export async function POST(
     });
 
     const gitlabStatus = gitlabRes.data.status.toUpperCase();
-    console.log(`📡 GitLab Status: ${gitlabStatus}`);
+    console.log(` GitLab Status: ${gitlabStatus}`);
 
     // 4. แปลง Status
     let newStatus = scan.status;
@@ -67,14 +67,14 @@ export async function POST(
         where: { id: scan.id },
         data: { status: newStatus },
       });
-      console.log(`✅ DB Updated: ${newStatus}`);
+      console.log(` DB Updated: ${newStatus}`);
     } else {
       console.log(`Running... Status unchanged.`);
     }
 
     return NextResponse.json({ success: true, newStatus });
   } catch (error: any) {
-    console.error("❌ Sync Error:", error.message);
+    console.error(" Sync Error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

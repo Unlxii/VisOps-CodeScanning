@@ -7,6 +7,7 @@ import { ArrowLeft, GitBranch, Hash, Package, Timer, Download, Rocket } from "lu
 import ScanTimeline from "@/components/ScanTimeline";
 import PipelineStepper from "@/components/PipelineStepper";
 import ProjectInfoButton from "@/components/ProjectInfoButton";
+import ScanDownloadButton from "@/components/ScanDownloadButton";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -49,6 +50,7 @@ export default async function ScanPage(props: Props) {
         vulnMedium: true, // [NEW]
         vulnLow: true, // [NEW]
         details: true, // [NEW] Storage for findings and reports
+        reportJson: true, // [NEW] Raw generated reports from scanner
         service: {
           select: {
             serviceName: true,
@@ -81,7 +83,7 @@ export default async function ScanPage(props: Props) {
         medium: scanData.vulnMedium || 0,
         low: scanData.vulnLow || 0,
       },
-      rawReports: details, // Assuming details contains the report keys directly
+      rawReports: scanData.reportJson || details, // Assuming reportJson or details contains the report keys directly
       findings: details.findings || [],
     };
 
@@ -173,26 +175,26 @@ export default async function ScanPage(props: Props) {
           </div>
           
           {/* [NEW] Download Actions (Moved from StatusHeader) - Restored */}
-          {formattedScanData.status === 'SUCCESS' && (
+          {['SUCCESS', 'COMPLETED'].includes(formattedScanData.status) && (
              <div className="flex justify-end gap-2 mb-2">
-                 {(formattedScanData.rawReports as any)?.gitleaks && (
+                 {((formattedScanData.rawReports as any)?.gitleaks || (formattedScanData.rawReports as any)?.gitleaksReport) && (
                     <ScanDownloadButton 
                         label="Gitleaks" 
-                        data={(formattedScanData.rawReports as any).gitleaks} 
+                        data={(formattedScanData.rawReports as any).gitleaks || (formattedScanData.rawReports as any).gitleaksReport} 
                         color="purple" 
                     />
                  )}
-                 {(formattedScanData.rawReports as any)?.semgrep && (
+                 {((formattedScanData.rawReports as any)?.semgrep || (formattedScanData.rawReports as any)?.semgrepReport) && (
                     <ScanDownloadButton 
                         label="Semgrep" 
-                        data={(formattedScanData.rawReports as any).semgrep} 
+                        data={(formattedScanData.rawReports as any).semgrep || (formattedScanData.rawReports as any).semgrepReport} 
                         color="emerald" 
                     />
                  )}
-                 {(formattedScanData.rawReports as any)?.trivy && (
+                 {((formattedScanData.rawReports as any)?.trivy || (formattedScanData.rawReports as any)?.trivyReport) && (
                     <ScanDownloadButton 
                         label="Trivy" 
-                        data={(formattedScanData.rawReports as any).trivy} 
+                        data={(formattedScanData.rawReports as any).trivy || (formattedScanData.rawReports as any).trivyReport} 
                         color="blue" 
                     />
                  )}
@@ -231,35 +233,6 @@ export default async function ScanPage(props: Props) {
     console.error("💥 Error in ScanPage:", error);
     throw error;
   }
-}
-
-// [NEW] Helper Component for Download Buttons
-function ScanDownloadButton({ label, data, color }: { label: string, data: any, color: 'purple' | 'emerald' | 'blue' }) {
-  const handleDownload = () => {
-    if (!data) return alert("Report not available");
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${label.toLowerCase()}-report.json`;
-    link.click();
-  };
-
-  const colorClasses = {
-      purple: "text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 dark:text-purple-300 dark:bg-purple-900/20 dark:border-purple-900/50",
-      emerald: "text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-900/50",
-      blue: "text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100 dark:text-blue-300 dark:bg-blue-900/20 dark:border-blue-900/50"
-  };
-
-  return (
-    <button
-      onClick={handleDownload}
-      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition ${colorClasses[color]}`}
-    >
-      <Download size={14} /> {label}
-    </button>
-  );
 }
 
 

@@ -20,6 +20,7 @@ interface ActiveScan {
   service?: {
     serviceName: string;
     imageName: string;
+    averageDuration?: number | null;
   };
   startedAt: string;
 }
@@ -107,9 +108,19 @@ export default function ActiveScanMonitor() {
         {!isMinimized && (
           <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
             {activeScans.map((scan, index) => {
-               // Simple Estimation: 2 minutes per scan ahead of this one
-               const queuePosition = index; 
-               const estWaitTimeMinutes = (queuePosition + 1) * 2;
+               // Improved Estimation utilizing averageDuration
+               let etaText = "";
+               if (scan.status === "RUNNING") {
+                  // If there's a historical average, add a 15-minute buffer (900000ms), else default to 20 mins (1200000ms)
+                  const avgDurationMs = scan.service?.averageDuration ? (scan.service.averageDuration + 900000) : 1200000;
+                  const startedAtTime = new Date(scan.startedAt || Date.now()).getTime();
+                  const elapsedMs = Date.now() - startedAtTime;
+                  const remainingMs = Math.max(60000, avgDurationMs - elapsedMs); // Minimum 1 minute
+                  const mins = Math.ceil(remainingMs / 60000);
+                  etaText = `about ${mins} mins left`;
+               } else {
+                  etaText = `about ${(index + 1) * 3} mins wait`;
+               }
                
                return (
               <Link
@@ -130,7 +141,7 @@ export default function ActiveScanMonitor() {
                       {scan.status === "RUNNING" ? (
                          <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
                       ) : (
-                         <span className="text-xs font-bold text-slate-500">{queuePosition + 1}</span>
+                         <span className="text-xs font-bold text-slate-500">{index + 1}</span>
                       )}
                     </div>
                     <div className="min-w-0">
@@ -143,7 +154,12 @@ export default function ActiveScanMonitor() {
                          </p>
                          {scan.status === "QUEUED" && (
                             <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">
-                               ~{estWaitTimeMinutes}m wait
+                               Wait: {etaText}
+                            </span>
+                         )}
+                         {scan.status === "RUNNING" && (
+                            <span className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                               {etaText}
                             </span>
                          )}
                       </div>
