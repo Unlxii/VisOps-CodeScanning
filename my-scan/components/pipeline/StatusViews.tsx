@@ -72,7 +72,7 @@ export const CancelledState = ({ scanId, onRescan }: CancelledStateProps) => {
         {onRescan && (
             <button
               onClick={onRescan}
-              className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm"
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 dark:bg-blue-700 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition shadow-sm"
             >
               <Loader2 className="w-4 h-4" />
               Restart Scan

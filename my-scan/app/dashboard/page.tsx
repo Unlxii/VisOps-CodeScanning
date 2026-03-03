@@ -185,7 +185,7 @@ export default function DashboardPage() {
   // --- Auth Redirect ---
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
+      router.push("/");
     } else if (status === "authenticated") {
       // ✅ Redirect to /setup if not complete (and not admin)
       if (session?.user?.role !== "ADMIN" && !session?.user?.isSetupComplete) {

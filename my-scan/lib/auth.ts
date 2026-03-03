@@ -266,7 +266,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
-    signIn: "/login",
+    signIn: "/",
   },
   events: {
     async signIn({ user, account, profile, isNewUser }) {

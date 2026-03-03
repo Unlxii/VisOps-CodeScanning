@@ -33,7 +33,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         } catch (error) {
           console.error("Failed check", error);
         }
-        signOut({ callbackUrl: "/login?reason=timeout" });
+        signOut({ callbackUrl: "/?reason=timeout" });
       }, IDLE_TIMEOUT_MS);
     }
   }, [status]);
@@ -67,11 +67,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   // หน้าที่ไม่แสดง Layout หลัก (Login, Setup, Landing Page for guests)
   const isPublicOrAuthPage =
-    pathname === "/login" ||
+    pathname === "/" ||
     pathname === "/setup" ||
     pathname === "/pending" ||
-    pathname === "/admin/login" ||
-    (pathname === "/" && status === "unauthenticated");
+    pathname === "/admin/login";
 
   if (status === "loading") return null;
 
@@ -82,7 +81,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Case 2: Authenticated User -> แสดง Sidebar + Navbar Layout
   const user = session.user as any;
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = user?.role === "admin";
   const isSuperAdmin = user?.email === "admin@local";
 
   return (

@@ -71,7 +71,7 @@ function ScanHistoryContent() {
 
       const response = await fetch(url);
       if (response.status === 401) {
-        router.replace("/login");
+        router.replace("/");
         return;
       }
       if (response.ok) {
