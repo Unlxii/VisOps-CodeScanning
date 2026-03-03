@@ -16,11 +16,11 @@ export default function TermsPage() {
         <div className="flex justify-between items-start mb-8">
           <div>
             <Link
-              href="/login"
+              href="/"
               className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors mb-4"
             >
               <ArrowLeft size={16} />{" "}
-              {lang === "EN" ? "Back to Login" : "กลับหน้าเข้าสู่ระบบ"}
+              {lang === "EN" ? "Back to Home" : "กลับหน้าหลัก"}
             </Link>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
               {lang === "EN" ? "Terms of Service" : "ข้อกำหนดการใช้งาน"}
