@@ -1,27 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface FeatureItemProps {
   title: string;
-  subtitle: string;
   description: string;
   imageSrc: string;
   imageAlt: string;
   imagePosition: "left" | "right";
-  icon: ReactNode;
-  accentColor: string; // e.g. "blue", "purple", "emerald", "orange"
+  accentColor: string;
+  tags?: { label: string; color: string }[];
 }
 
 function FeatureItem({
   title,
-  subtitle,
   description,
   imageSrc,
   imageAlt,
   imagePosition,
-  icon,
   accentColor,
+  tags,
 }: FeatureItemProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -41,24 +39,20 @@ function FeatureItem({
     return () => observer.disconnect();
   }, []);
 
-  const colorMap: Record<string, { badge: string; glow: string; border: string }> = {
+  const colorMap: Record<string, { glow: string; border: string }> = {
     blue: {
-      badge: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/50",
       glow: "from-blue-400/10 to-indigo-400/10",
       border: "border-blue-200/50 dark:border-blue-800/30",
     },
     purple: {
-      badge: "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800/50",
       glow: "from-purple-400/10 to-pink-400/10",
       border: "border-purple-200/50 dark:border-purple-800/30",
     },
     emerald: {
-      badge: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50",
       glow: "from-emerald-400/10 to-teal-400/10",
       border: "border-emerald-200/50 dark:border-emerald-800/30",
     },
     orange: {
-      badge: "bg-orange-50 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800/50",
       glow: "from-orange-400/10 to-amber-400/10",
       border: "border-orange-200/50 dark:border-orange-800/30",
     },
@@ -75,16 +69,24 @@ function FeatureItem({
     >
       {/* Text Content */}
       <div className={imagePosition === "left" ? "lg:order-2" : ""}>
-        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border mb-4 ${colors.badge}`}>
-          {icon}
-          {subtitle}
-        </div>
         <h3 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight mb-4 leading-tight">
           {title}
         </h3>
-        <p className="text-base md:text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
+        <p className="text-base md:text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-5">
           {description}
         </p>
+        {tags && tags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <span
+                key={tag.label}
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${tag.color}`}
+              >
+                {tag.label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Image */}
@@ -106,47 +108,42 @@ function FeatureItem({
 
 // --- Main Export ---
 
-import { ScanSearch, Workflow, Bug, GitCompareArrows } from "lucide-react";
-
 const features: Omit<FeatureItemProps, "imagePosition">[] = [
   {
     title: "Scan in Seconds",
-    subtitle: "Quick Start",
     description:
       "Simply point to your Git repository and choose a scan mode. VisScan supports both Scan Only (SAST + secret detection) and full Scan & Build (build Docker image + container scanning) workflows.",
     imageSrc: "/landing/scan-page.png",
     imageAlt: "Start a Scan",
-    icon: <ScanSearch size={14} />,
     accentColor: "purple",
   },
   {
     title: "Full Pipeline Visibility",
-    subtitle: "CI/CD Pipeline",
     description:
       "Watch every step of your security pipeline unfold in real time: from source code checkout, through SAST analysis, Docker build, to container image scanning. Every stage is logged and traceable.",
     imageSrc: "/landing/scan-pipeline.png",
     imageAlt: "Pipeline View",
-    icon: <Workflow size={14} />,
     accentColor: "emerald",
   },
   {
     title: "Vulnerability Deep Dive",
-    subtitle: "Results & Analysis",
     description:
-      "Drill into detailed vulnerability reports — grouped by severity (Critical, High, Medium, Low). Compare scans over time, track remediation progress, and export results for your team.",
+      "Drill into detailed vulnerability reports — grouped by severity (Critical, High, Medium, Low). Powered by three industry-standard scanners working together to give you full coverage.",
     imageSrc: "/landing/scan-result.png",
     imageAlt: "Scan Results",
-    icon: <Bug size={14} />,
     accentColor: "orange",
+    tags: [
+      { label: "Gitleaks · Secrets Detection", color: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50" },
+      { label: "Semgrep · SAST", color: "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800/50" },
+      { label: "Trivy · Container Scan", color: "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/50" },
+    ],
   },
   {
     title: "Compare & Track Progress",
-    subtitle: "Comparison",
     description:
       "Compare vulnerability results across different scans side by side. Track your security improvements over time and ensure every release is safer than the last.",
     imageSrc: "/landing/compare-scan.png",
     imageAlt: "Compare Scans",
-    icon: <GitCompareArrows size={14} />,
     accentColor: "blue",
   },
 ];

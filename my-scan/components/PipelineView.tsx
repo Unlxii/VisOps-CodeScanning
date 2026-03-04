@@ -396,7 +396,7 @@ export default function PipelineView(props: {
       {/* [Removed PipelineStepper - now in ScanPage] */}
       
       {/* ปุ่ม Release จะโผล่มาเองอัตโนมัติเมื่อ isSuccess เป็นจริง */}
-      {!isScanOnly && (isSuccess || run.status?.toUpperCase() === "MANUAL") && !isBlocked && (
+      {!isScanOnly && (isSuccess || run.status?.toUpperCase() === "MANUAL" || run.status === "FAILED_SECURITY") && !isBlocked && (
         <ConfirmBuildButton 
             scanId={scanId} 
             status={

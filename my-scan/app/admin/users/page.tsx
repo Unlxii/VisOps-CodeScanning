@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { 
   Shield, 
   User as UserIcon, 
@@ -17,6 +18,7 @@ import {
   ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
+import { fetcher } from "@/lib/fetcher";
 
 // Types
 interface User {
@@ -36,21 +38,18 @@ interface User {
   };
 }
 
-const fetcher = async (url: string) => {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error("Failed to fetch");
-  }
-  return res.json();
-};
+
 
 export default function AdminUsersPage() {
   const { data: session } = useSession();
   const { data: users, error, mutate } = useSWR<User[]>("/api/admin/users", fetcher);
   
+  const searchParams = useSearchParams();
   // State
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<"ALL" | "ADMIN" | "USER" | "PENDING">("ALL");
+  const [activeTab, setActiveTab] = useState<"ALL" | "ADMIN" | "USER" | "PENDING">(
+    (searchParams.get("tab") as any) || "ALL"
+  );
   const [sortField, setSortField] = useState<keyof User | "stats.projects">("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,6 +58,77 @@ export default function AdminUsersPage() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingQuotaId, setEditingQuotaId] = useState<string | null>(null);
   const [quotaValue, setQuotaValue] = useState<number>(6);
+
+  // Bulk select state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkLoading, setIsBulkLoading] = useState(false);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allPagePendingSelected) {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        pendingUsersOnPage.forEach(u => next.delete(u.id));
+        return next;
+      });
+    } else {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        pendingUsersOnPage.forEach(u => next.add(u.id));
+        return next;
+      });
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Approve ${selectedIds.size} selected user(s)?`)) return;
+    setIsBulkLoading(true);
+    try {
+      const res = await fetch("/api/admin/users/bulk-approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds: Array.from(selectedIds) }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSelectedIds(new Set());
+        mutate();
+      } else {
+        alert(data.error || "Bulk approve failed");
+      }
+    } catch { alert("Network error"); }
+    finally { setIsBulkLoading(false); }
+  };
+
+  const handleApproveAll = async () => {
+    const pendingCount = userList.filter(u => u.status === "PENDING").length;
+    if (pendingCount === 0) return;
+    if (!confirm(`Approve ALL ${pendingCount} pending users?`)) return;
+    setIsBulkLoading(true);
+    try {
+      const res = await fetch("/api/admin/users/bulk-approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approveAll: true }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSelectedIds(new Set());
+        mutate();
+      } else {
+        alert(data.error || "Failed");
+      }
+    } catch { alert("Network error"); }
+    finally { setIsBulkLoading(false); }
+  };
 
   // Handle quota update
   const handleQuotaUpdate = async (userId: string, newQuota: number) => {
@@ -168,6 +238,11 @@ export default function AdminUsersPage() {
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+  // Derived from paginatedUsers — for checkbox select-all on PENDING tab
+  const pendingUsersOnPage = paginatedUsers.filter((u: User) => u.status === "PENDING");
+  const allPagePendingSelected = pendingUsersOnPage.length > 0 && pendingUsersOnPage.every((u: User) => selectedIds.has(u.id));
+
+
   if (session?.user.role !== "ADMIN" && session?.user.role !== "SUPERADMIN") {
       return <div className="p-8 text-center text-red-500">Unauthorized Access</div>;
   }
@@ -195,6 +270,18 @@ export default function AdminUsersPage() {
             className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg pl-9 pr-4 py-2 text-sm text-gray-900 dark:text-white focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700 outline-none transition-all"
           />
         </div>
+
+        {/* Approve All Pending — always visible when there are pending users */}
+        {userList.filter(u => u.status === "PENDING").length > 0 && (
+          <button
+            onClick={handleApproveAll}
+            disabled={isBulkLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors whitespace-nowrap"
+          >
+            <CheckCircle className="w-4 h-4" />
+            Approve All Pending ({userList.filter(u => u.status === "PENDING").length})
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -225,6 +312,18 @@ export default function AdminUsersPage() {
           <table className="w-full text-left text-sm text-gray-500 dark:text-gray-400">
             <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-800">
               <tr>
+                {/* Checkbox header — only visible on PENDING tab */}
+                {activeTab === "PENDING" && (
+                  <th className="pl-4 pr-2 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allPagePendingSelected}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-green-600 cursor-pointer"
+                      title="Select all on this page"
+                    />
+                  </th>
+                )}
                 <SortHeader label="User" field="name" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[30%]" />
                 <SortHeader label="Role" field="role" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[10%]" />
                 <SortHeader label="Quota" field="stats.projects" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[10%]" />
@@ -248,7 +347,20 @@ export default function AdminUsersPage() {
                 </tr>
               ) : (
                 paginatedUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group">
+                  <tr key={user.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group ${selectedIds.has(user.id) ? 'bg-green-50/50 dark:bg-green-900/10' : ''}`}>
+                    {/* Checkbox cell — only for PENDING tab + PENDING users */}
+                    {activeTab === "PENDING" && (
+                      <td className="pl-4 pr-2 py-4 w-10">
+                        {user.status === "PENDING" && (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(user.id)}
+                            onChange={() => toggleSelect(user.id)}
+                            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-green-600 cursor-pointer"
+                          />
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
@@ -466,6 +578,31 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      {/* Floating bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
+          <div className="flex items-center gap-3 bg-slate-900 dark:bg-slate-800 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700">
+            <span className="text-sm font-medium text-slate-300">
+              {selectedIds.size} selected
+            </span>
+            <div className="h-4 w-px bg-slate-700" />
+            <button
+              onClick={handleBulkApprove}
+              disabled={isBulkLoading}
+              className="flex items-center gap-2 px-4 py-1.5 bg-green-500 hover:bg-green-400 disabled:opacity-60 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              <CheckCircle className="w-4 h-4" />
+              {isBulkLoading ? "Approving..." : `Approve ${selectedIds.size}`}
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="text-slate-400 hover:text-white text-sm transition-colors px-2"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

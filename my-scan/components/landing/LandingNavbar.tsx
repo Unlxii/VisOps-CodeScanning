@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import Link from "next/link";
 
 interface LandingNavbarProps {
   onSignIn: () => void;
@@ -19,9 +20,11 @@ export default function LandingNavbar({ onSignIn, isLoading }: LandingNavbarProp
   }, []);
 
   const navLinks = [
-    { label: "Features", href: "#features" },
-    { label: "Overview", href: "#showcase" },
+    { label: "Features", href: "#features", isRoute: false },
+    { label: "Overview", href: "#showcase", isRoute: false },
+    { label: "Guide", href: "/guide", isRoute: true },
   ];
+
 
   return (
     <nav
@@ -44,15 +47,25 @@ export default function LandingNavbar({ onSignIn, isLoading }: LandingNavbarProp
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) =>
+            link.isRoute ? (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                {link.label}
+              </Link>
+            ) : (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                {link.label}
+              </a>
+            )
+          )}
           <button
             onClick={onSignIn}
             disabled={isLoading}
@@ -74,16 +87,27 @@ export default function LandingNavbar({ onSignIn, isLoading }: LandingNavbarProp
       {/* Mobile Menu */}
       {mobileOpen && (
         <div className="md:hidden bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 px-6 py-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileOpen(false)}
-              className="block text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white py-2"
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) =>
+            link.isRoute ? (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className="block text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white py-2"
+              >
+                {link.label}
+              </Link>
+            ) : (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className="block text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white py-2"
+              >
+                {link.label}
+              </a>
+            )
+          )}
           <button
             onClick={() => { setMobileOpen(false); onSignIn(); }}
             disabled={isLoading}

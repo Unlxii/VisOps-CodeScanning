@@ -18,6 +18,7 @@ import {
   User,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import AdminNotificationBell from "@/components/AdminNotificationBell";
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -113,6 +114,12 @@ export default function Navbar() {
 
       <div className="flex items-center gap-3">
         <ThemeToggle />
+
+        {/* Admin-only notification bell */}
+        {(user?.role === "ADMIN" || user?.role === "SUPERADMIN") && (
+          <AdminNotificationBell />
+        )}
+
         
         <div id="navbar-profile-section" className="relative" ref={dropdownRef}>
           <button

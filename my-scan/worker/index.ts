@@ -391,13 +391,15 @@ async function fetchReportArtifacts(pipelineId: string) {
              });
          }
 
-         // Parse Semgrep
+         // Parse Semgrep — align severity with scan detail API normalizeSeverity()
+         // API mapping: error/critical→critical, warning/high→high, note/info/low→low, medium→medium
          if (reportMap.semgrep && Array.isArray(reportMap.semgrep.results)) {
              reportMap.semgrep.results.forEach((issue: any) => {
-                 const sev = (issue.extra?.severity || "").toUpperCase();
-                 if (sev === "ERROR") vulnHigh++;
-                 else if (sev === "WARNING") vulnMedium++;
-                 else vulnLow++;
+                 const sev = (issue.extra?.severity || "").toLowerCase();
+                 if (sev === "error" || sev === "critical") vulnCritical++;
+                 else if (sev === "warning" || sev === "high") vulnHigh++;
+                 else if (sev === "medium") vulnMedium++;
+                 else vulnLow++; // note, info, unknown
              });
          }
 

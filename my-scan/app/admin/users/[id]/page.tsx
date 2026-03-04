@@ -9,8 +9,8 @@ import {
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { UserDockerEditorModal } from "@/components/admin/UserDockerEditorModal";
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import StatusBadge from "@/components/ui/StatusBadge";
+import { fetcher } from "@/lib/fetcher";
 
 export default function UserDetailsPage() {
   const { data: session } = useSession();
@@ -318,11 +318,4 @@ function StatCard({ label, value }: any) {
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
         </div>
     )
-}
-
-function StatusBadge({ status }: { status: string }) {
-    if (status === "COMPLETED" || status === "SUCCESS") return <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800">Success</span>;
-    if (status === "FAILED") return <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">Failed</span>;
-    if (status === "RUNNING") return <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800 animate-pulse">Running</span>;
-    return <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700">{status}</span>;
 }

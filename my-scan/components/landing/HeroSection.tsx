@@ -15,11 +15,7 @@ export default function HeroSection({ onSignIn, isLoading }: HeroSectionProps) {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-br from-blue-400/20 via-indigo-400/10 to-transparent rounded-full blur-3xl -z-10" />
 
       <div className="max-w-7xl mx-auto px-6 text-center">
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800/50 rounded-full text-xs font-semibold text-blue-700 dark:text-blue-400 mb-8 animate-in fade-in slide-in-from-bottom-3 duration-500">
-          <Shield size={14} />
-          Security Scanning Platform for CMU
-        </div>
+
 
         {/* Headline */}
         <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -65,9 +61,9 @@ export default function HeroSection({ onSignIn, isLoading }: HeroSectionProps) {
         {/* Stats */}
         <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12 mb-16 animate-in fade-in duration-700 delay-300">
           {[
-            { icon: Shield, label: "Vulnerability Scanning", value: "SAST + Secrets" },
-            { icon: GitBranch, label: "Pipeline", value: "Build & Push" },
-            { icon: Lock, label: "Security", value: "Encrypted" },
+            { icon: Shield,    label: "Detect Vulnerabilities",   value: "Gitleaks · Semgrep" },
+            { icon: GitBranch, label: "Container Scanning",        value: "Trivy" },
+            { icon: Lock,      label: "Build & Push to Docker",    value: "Docker Hub Registry" },
           ].map((stat) => (
             <div key={stat.label} className="flex items-center gap-3 text-sm">
               <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
