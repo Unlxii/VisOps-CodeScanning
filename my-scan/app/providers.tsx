@@ -102,7 +102,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               : "overflow-y-auto p-4 sm:p-6 lg:p-8"
           }`}
         >
-          {/* ✅ แก้ไขตรงนี้: ลบ max-w-7xl mx-auto ออก ใช้ w-full แทน */}
           <div className="w-full max-w-full h-full">{children}</div>
         </main>
       </div>
@@ -111,6 +110,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { TRPCReactProvider } from "@/lib/trpc/react";
 
 // ... existing imports
 
@@ -119,16 +119,18 @@ import { TourProvider } from "@/components/providers/TourProvider";
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <TourProvider>
-          <AppLayout>{children}</AppLayout>
-        </TourProvider>
-      </ThemeProvider>
+      <TRPCReactProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TourProvider>
+            <AppLayout>{children}</AppLayout>
+          </TourProvider>
+        </ThemeProvider>
+      </TRPCReactProvider>
     </SessionProvider>
   );
 }

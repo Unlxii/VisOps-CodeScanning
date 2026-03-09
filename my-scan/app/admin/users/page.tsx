@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
@@ -18,31 +19,25 @@ import {
   ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
-import { fetcher } from "@/lib/fetcher";
+import { trpc } from "@/lib/trpc/react";
 
-// Types
-interface User {
-  id: string;
-  name: string | null;
-  email: string | null;
-  role: "ADMIN" | "SUPERADMIN" | "user";
-  status: "ACTIVE" | "PENDING" | "REJECTED";
-  image: string | null;
-  createdAt: string;
-  maxProjects: number;
-  provider: string; 
-  stats: {
-    projects: number;
-    services: number;
-    scans: number;
-  };
-}
+import type { AppRouter } from "@/lib/trpc/root";
+import type { inferRouterOutputs } from "@trpc/server";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type User = RouterOutputs["users"]["all"][number];
 
 
 
 export default function AdminUsersPage() {
   const { data: session } = useSession();
-  const { data: users, error, mutate } = useSWR<User[]>("/api/admin/users", fetcher);
+  
+  const { 
+    data: users, 
+    isLoading: isUsersLoading, 
+    error, 
+    refetch: refetchUsers 
+  } = trpc.users.all.useQuery();
   
   const searchParams = useSearchParams();
   // State
@@ -100,7 +95,7 @@ export default function AdminUsersPage() {
       const data = await res.json();
       if (res.ok) {
         setSelectedIds(new Set());
-        mutate();
+        refetchUsers();
       } else {
         alert(data.error || "Bulk approve failed");
       }
@@ -122,7 +117,7 @@ export default function AdminUsersPage() {
       const data = await res.json();
       if (res.ok) {
         setSelectedIds(new Set());
-        mutate();
+        refetchUsers();
       } else {
         alert(data.error || "Failed");
       }
@@ -139,7 +134,7 @@ export default function AdminUsersPage() {
         body: JSON.stringify({ userId, maxProjects: newQuota }),
       });
       if (!res.ok) throw new Error("Failed to update quota");
-      mutate(); // Refresh user list
+      refetchUsers(); // Refresh user list
       setEditingQuotaId(null);
       alert(`✅ Successfully updated user quota to ${newQuota}`);
     } catch (err) {
@@ -160,7 +155,7 @@ export default function AdminUsersPage() {
     };
   }, [openMenuId]);
 
-  const isLoading = !users && !error;
+  const isLoading = isUsersLoading;
   
   // Stats
   const userList = Array.isArray(users) ? users : [];
@@ -192,7 +187,7 @@ export default function AdminUsersPage() {
         const data = await res.json();
         alert(data.error || "Action failed");
       } else {
-        mutate(); // Refresh list
+        refetchUsers(); // Refresh list
       }
     } catch (err) {
       alert("An unexpected error occurred");
@@ -239,8 +234,8 @@ export default function AdminUsersPage() {
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Derived from paginatedUsers — for checkbox select-all on PENDING tab
-  const pendingUsersOnPage = paginatedUsers.filter((u: User) => u.status === "PENDING");
-  const allPagePendingSelected = pendingUsersOnPage.length > 0 && pendingUsersOnPage.every((u: User) => selectedIds.has(u.id));
+  const pendingUsersOnPage = paginatedUsers.filter(u => u.status === "PENDING");
+  const allPagePendingSelected = pendingUsersOnPage.length > 0 && pendingUsersOnPage.every(u => selectedIds.has(u.id));
 
 
   if (session?.user.role !== "ADMIN" && session?.user.role !== "SUPERADMIN") {

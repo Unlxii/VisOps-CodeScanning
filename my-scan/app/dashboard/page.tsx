@@ -5,7 +5,8 @@ import { useSession } from "next-auth/react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import useSWR, { mutate } from "swr";
+import useSWR from "swr";
+import { trpc } from "@/lib/trpc/react";
 import {
   Loader2,
   Trash2,
@@ -33,37 +34,6 @@ import ProjectCard from "@/components/ProjectCard";
 import CreateProjectCard from "@/components/CreateProjectCard";
 
 // --- Types ---
-interface Project {
-  id: string;
-  groupName: string;
-  repoUrl: string;
-  isActive: boolean;
-  services: Service[];
-  createdAt: string;
-}
-
-interface Service {
-  id: string;
-  serviceName: string;
-  imageName: string;
-  contextPath: string;
-  scans: ScanHistory[];
-}
-
-interface ScanHistory {
-  id: string;
-  pipelineId: string | null;
-  status: string;
-  scanMode: string; // "SCAN_ONLY" | "SCAN_AND_BUILD"
-  imageTag: string;
-  vulnCritical: number;
-  vulnHigh: number;
-  vulnMedium: number;
-  vulnLow: number;
-  startedAt: string;
-  completedAt: string | null;
-}
-
 interface ActiveScan {
   id: string;
   pipelineId: string | null;
@@ -75,19 +45,11 @@ interface ActiveScan {
   startedAt: string;
 }
 
-// --- Fetcher with no-cache ---
+// --- Fetcher for Active Scans Only ---
+// We keep Active Scans on SWR for now or move it to trpc later, but projects will be strictly tRPC
 const fetcher = async (url: string) => {
-  const res = await fetch(url, {
-    cache: 'no-store',
-    headers: {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-    },
-  });
-  if (!res.ok) {
-    if (res.status === 401) throw new Error("Unauthorized");
-    throw new Error("Failed to fetch data");
-  }
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error("Failed to fetch data");
   return res.json();
 };
 
@@ -100,11 +62,10 @@ export default function DashboardPage() {
   const [deletingProject, setDeletingProject] = useState<string | null>(null);
   const [scanningService, setScanningService] = useState<string | null>(null);
 
-  // ✅ Store lastScanMode
   const [showRescanModal, setShowRescanModal] = useState<{
     serviceId: string;
     serviceName: string;
-    lastScanMode: string; // "SCAN_ONLY" or "SCAN_AND_BUILD"
+    lastScanMode: string;
   } | null>(null);
 
   const [rescanTag, setRescanTag] = useState("");
@@ -128,19 +89,17 @@ export default function DashboardPage() {
     { refreshInterval: 2000 },
   );
 
-  const { data: dashboardData, isLoading: dashboardLoading } = useSWR(
-    status === "authenticated" ? "/api/dashboard" : null,
-    fetcher,
-    { 
-      // Refresh faster when there are active scans
-      refreshInterval: (activeScansData?.activeScans?.length || 0) > 0 ? 3000 : 5000, 
-      revalidateOnFocus: true,
-      revalidateOnMount: true,
-      dedupingInterval: 1000, // Allow revalidation within 1 second
-    },
-  );
+  // tRPC query: Replaces the manual /api/dashboard fetch
+  const { 
+    data: dashboardData, 
+    isLoading: dashboardLoading,
+    refetch: refetchDashboard
+  } = trpc.dashboard.projects.useQuery(undefined, {
+    enabled: status === "authenticated",
+    refetchInterval: (activeScansData?.activeScans?.length || 0) > 0 ? 3000 : 5000,
+  });
 
-  const projects: Project[] = dashboardData?.projects || [];
+  const projects = dashboardData?.projects || [];
   const activeScans: ActiveScan[] = activeScansData?.activeScans || [];
 
   // --- Logic: Search Filter ---
@@ -159,7 +118,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!activeScansData) return;
 
-    // ✅ FIX: Explicitly cast to Set<string>
+    //  FIX: Explicitly cast to Set<string>
     const currentIds = new Set<string>(
       activeScans.map((s: ActiveScan) => s.id),
     );
@@ -177,7 +136,7 @@ export default function DashboardPage() {
     }
 
     if (hasChanged) {
-      mutate("/api/dashboard");
+      refetchDashboard();
     }
     prevActiveScanIds.current = currentIds;
   }, [activeScansData, activeScans]);
@@ -187,7 +146,7 @@ export default function DashboardPage() {
     if (status === "unauthenticated") {
       router.push("/");
     } else if (status === "authenticated") {
-      // ✅ Redirect to /setup if not complete (and not admin)
+      //  Redirect to /setup if not complete (and not admin)
       if (session?.user?.role !== "ADMIN" && !session?.user?.isSetupComplete) {
          router.push("/setup");
       }
@@ -214,7 +173,7 @@ export default function DashboardPage() {
 
       if (res.ok) {
         showToast("Project deleted", "success");
-        mutate("/api/dashboard");
+        refetchDashboard();
       } else {
         const err = await res.json();
         showToast(err.error || "Failed to delete", "error");
@@ -241,7 +200,7 @@ export default function DashboardPage() {
       if (res.ok) {
         showToast("Project updated", "success");
         setEditingProject(null);
-        mutate("/api/dashboard");
+        refetchDashboard();
       } else {
         showToast("Failed to update", "error");
       }
@@ -251,7 +210,7 @@ export default function DashboardPage() {
     }
   };
 
-  // ✅ Unified Rescan Handler
+  //  Unified Rescan Handler
   const handleStartRescan = async () => {
     if (!showRescanModal) return;
 
@@ -272,6 +231,8 @@ export default function DashboardPage() {
       if (res.ok) {
         setShowRescanModal(null);
         setRescanTag("");
+        // Keep mutate for /api/scan/status/active since we left that on SWR
+        const { mutate } = await import("swr");
         mutate("/api/scan/status/active");
 
         let durationText = "";
@@ -281,7 +242,7 @@ export default function DashboardPage() {
            durationText = ` (Est. time: ${mins > 0 ? `${mins}m ` : ''}${secs}s)`;
         }
 
-        // ✅ The user requested NOT to show popup IF navigating to the Scan Details page.
+        //  The user requested NOT to show popup IF navigating to the Scan Details page.
         // We only show toast if NOT navigating (e.g., manual queue but no redirect).
         if (data.scanId) {
           router.push(`/scan/${data.scanId}`);
@@ -453,7 +414,7 @@ export default function DashboardPage() {
           {filteredProjects.map((project) => (
             <ProjectCard
               key={project.id}
-              project={project}
+              project={project as any}
               onEdit={(p) => setEditingProject(p)}
               onDelete={handleDeleteProject}
               isDeleting={deletingProject === project.id}
@@ -466,7 +427,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ✅ New Smart Rescan Modal */}
+      {/*  New Smart Rescan Modal */}
       {showRescanModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 border border-gray-100 dark:border-slate-800">

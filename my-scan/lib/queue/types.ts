@@ -21,8 +21,12 @@ export interface ScanJob {
 
   // Encrypted Credentials (resolved from user settings)
   gitToken?: string;
+  gitUsername?: string;
   dockerToken?: string;
   dockerUser?: string;
+
+  // [NEW] Custom Docker build arguments (e.g. NEXT_PUBLIC_SUPABASE_URL=xxx)
+  buildArgs?: Record<string, string>;
 
   // [NEW] Scan Mode Configuration
   trivyScanMode?: "fast" | "full";

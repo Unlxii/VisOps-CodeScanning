@@ -8,6 +8,7 @@ import ScanTimeline from "@/components/ScanTimeline";
 import PipelineStepper from "@/components/PipelineStepper";
 import ProjectInfoButton from "@/components/ProjectInfoButton";
 import ScanDownloadButton from "@/components/ScanDownloadButton";
+import ScanLiveWatcher from "@/components/ScanLiveWatcher";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -173,6 +174,15 @@ export default async function ScanPage(props: Props) {
               </div>
             </div>
           </div>
+
+          {/* Live status watcher — only shown for active scans */}
+          {["QUEUED", "RUNNING"].includes(formattedScanData.status) && (
+            <ScanLiveWatcher
+              scanId={scanData.id}
+              initialStatus={formattedScanData.status}
+              startedAt={scanData.startedAt?.toISOString() ?? null}
+            />
+          )}
           
           {/* [NEW] Download Actions (Moved from StatusHeader) - Restored */}
           {['SUCCESS', 'COMPLETED'].includes(formattedScanData.status) && (

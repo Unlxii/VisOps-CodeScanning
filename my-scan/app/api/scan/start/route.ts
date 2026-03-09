@@ -27,6 +27,7 @@ const ScanStartSchema = z.object({
   trivyScanMode: z.enum(["fast", "full"]).optional(),
   description: z.string().optional(), // [NEW] Description
   force: z.boolean().default(false),
+  buildArgs: z.record(z.string(), z.string()).optional(), // [NEW] Custom Docker build args
 });
 
 export async function POST(req: Request) {
@@ -211,6 +212,7 @@ export async function POST(req: Request) {
     }
 
     const githubToken = decrypt(gitCred.token);
+    const githubUsername = gitCred.username || "";
 
     const dockerToken = dockerCred ? decrypt(dockerCred.token) : undefined;
 
@@ -256,8 +258,12 @@ export async function POST(req: Request) {
       customDockerfile: finalConfig.customDockerfile,
 
       gitToken: githubToken,
+      gitUsername: githubUsername,
       dockerToken: dockerToken,
       dockerUser: dockerCred?.username,
+
+      // [NEW] Custom build args
+      buildArgs: parseResult.data.buildArgs as Record<string, string> | undefined,
 
       // [NEW] Default to FULL scan
       trivyScanMode: "full",

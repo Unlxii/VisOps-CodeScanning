@@ -64,9 +64,15 @@ export default function ScanTimeline({ logs, status }: ScanTimelineProps) {
                   {log.status.replace(/_/g, " ")}
                 </p>
                 {log.message && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {log.message}
-                  </p>
+                  log.message.includes("\n") ? (
+                    <pre className="text-xs text-slate-500 dark:text-slate-400 mt-1 bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-words max-h-48 border border-slate-200 dark:border-slate-700 font-mono leading-relaxed">
+                      {log.message}
+                    </pre>
+                  ) : (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {log.message}
+                    </p>
+                  )
                 )}
               </div>
               <span className="text-xs font-mono text-slate-400 dark:text-slate-500 whitespace-nowrap">

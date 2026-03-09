@@ -230,8 +230,12 @@ async function triggerGitLab(job: ScanJob): Promise<number> {
 
     // --- ตัวแปรสำหรับ Credentials ---
     GIT_TOKEN: job.gitToken || "",
+    GIT_USERNAME: job.gitUsername || "",
     DOCKER_PASSWORD: job.dockerToken || "",
     DOCKER_USER: job.dockerUser || "",
+
+    // [NEW] Custom Docker build args — serialized as JSON, parsed by CI
+    BUILD_ARGS: JSON.stringify(job.buildArgs || {}),
 
     // --- ตัวแปรสำหรับแสดงผลชื่อ Pipeline (Display) ---
     PROJECT_NAME: projectPath, 
@@ -430,6 +434,33 @@ async function fetchReportArtifacts(pipelineId: string) {
     }
   }
 
+// [NEW] Fetch last N lines of failed GitLab job trace for user-facing error messages
+async function fetchFailedJobTrace(pipelineId: string, maxLines = 30): Promise<string | null> {
+  try {
+    const jobsRes = await axios.get(
+      `${GITLAB_API_URL}/projects/${GITLAB_PROJECT_ID}/pipelines/${pipelineId}/jobs`,
+      { headers: { "PRIVATE-TOKEN": GITLAB_TOKEN }, timeout: 5000 }
+    );
+    const failedJob = jobsRes.data.find((j: any) => j.status === "failed");
+    if (!failedJob) return null;
+
+    const traceRes = await axios.get(
+      `${GITLAB_API_URL}/projects/${GITLAB_PROJECT_ID}/jobs/${failedJob.id}/trace`,
+      { headers: { "PRIVATE-TOKEN": GITLAB_TOKEN }, responseType: "text", timeout: 10000 }
+    );
+    const lines: string[] = (traceRes.data as string)
+      .split("\n")
+      // Strip ANSI escape codes
+      .map((l: string) => l.replace(/\x1B\[[0-9;]*[mGKHF]/g, "").trim())
+      .filter((l: string) => l.length > 0);
+    const tail = lines.slice(-maxLines).join("\n");
+    return `[${failedJob.name}]\n${tail}`;
+  } catch (err) {
+    console.warn("[Poller] Could not fetch failed job trace:", err);
+    return null;
+  }
+}
+
 async function pollRunningScans() {
   try {
     const runningScans = await prisma.scanHistory.findMany({
@@ -538,13 +569,20 @@ async function pollRunningScans() {
                     // [NEW] Update Average Duration
                     await updateServiceAverageDuration(scan.id);
                  }
+
+                 // [NEW] Fetch GitLab job error trace for user-facing Timeline message
+                 let failureMessage = `Pipeline finished with status ${glStatus}`;
+                 if (newStatus === "FAILED") {
+                   const trace = await fetchFailedJobTrace(scan.pipelineId);
+                   if (trace) failureMessage = trace;
+                 }
                  
                  await prisma.scanHistory.update({
                      where: { id: scan.id },
                      data: { 
                          status: newStatus,
                          completedAt: new Date(),
-                         scanLogs: appendLog(scan.scanLogs as any, newStatus, `Pipeline finished with status ${glStatus}`),
+                         scanLogs: appendLog(scan.scanLogs as any, newStatus, failureMessage),
                          pipelineJobs: pipelineJobs // Save final state of jobs
                      } as any
                  });

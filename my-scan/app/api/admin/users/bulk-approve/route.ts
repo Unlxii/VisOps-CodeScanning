@@ -5,6 +5,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { z } from "zod";
+
+const BulkApproveSchema = z.union([
+  z.object({ approveAll: z.literal(true) }),
+  z.object({
+    approveAll: z.literal(false).optional(),
+    userIds: z.array(z.string()).min(1, "At least one user ID required"),
+  }),
+]);
 
 export async function POST(req: Request) {
   try {
@@ -18,9 +27,15 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    // userIds: string[] — specific users to approve
-    // approveAll: boolean — approve all PENDING users
-    const { userIds, approveAll } = body;
+    const parsed = BulkApproveSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation Error", details: parsed.error.format() },
+        { status: 400 }
+      );
+    }
+    const approveAll = "approveAll" in parsed.data && parsed.data.approveAll === true;
+    const userIds = "userIds" in parsed.data ? parsed.data.userIds : [];
 
     if (approveAll) {
       // Approve ALL pending users at once

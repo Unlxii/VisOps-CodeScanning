@@ -1,18 +1,18 @@
 "use client";
 
-import useSWR, { mutate } from "swr";
+import { mutate } from "swr";
 import {
   Loader2,
   Activity,
   ArrowRight,
-  X,
   Minus,
   Maximize2,
+  Timer,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
 
-// Types
 interface ActiveScan {
   id: string;
   pipelineId: string | null;
@@ -25,59 +25,85 @@ interface ActiveScan {
   startedAt: string;
 }
 
-const fetcher = (url: string) => 
-  fetch(url).then((res) => {
-    // ถ้าได้ 401 (Unauthorized) ให้ return null แทนที่จะ throw error
-    if (res.status === 401) {
-      return { activeScans: [] };
-    }
-    return res.json();
-  });
+function formatEta(ms: number): string {
+  if (ms <= 0) return "wrapping up…";
+  const totalSecs = Math.ceil(ms / 1000);
+  const mins = Math.floor(totalSecs / 60);
+  const secs = totalSecs % 60;
+  if (mins === 0) return `${secs}s left`;
+  if (secs === 0) return `${mins}m left`;
+  return `${mins}m ${secs}s left`;
+}
 
 export default function ActiveScanMonitor() {
   const [isMinimized, setIsMinimized] = useState(false);
+  const [activeScans, setActiveScans] = useState<ActiveScan[]>([]);
+  // 1-second tick for real-time countdown display
+  const [now, setNow] = useState(() => Date.now());
   const lastSyncRef = useRef<number>(0);
+  const esRef = useRef<EventSource | null>(null);
 
-  // Poll Active Scans ทุก 2 วินาที
-  const { data, error } = useSWR("/api/scan/status/active", fetcher, {
-    refreshInterval: 2000,
-    // หยุด polling ถ้าเจอ error (เช่น user ยังไม่ login)
-    revalidateOnFocus: false,
-    shouldRetryOnError: false,
-  });
+  // Real-time countdown tick (independent of SSE)
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
-  const activeScans: ActiveScan[] = data?.activeScans || [];
+  const { status } = useSession();
 
-  // ✅ Auto-sync: เรียก POST /api/scan/[id] เพื่อ sync สถานะจาก GitLab
+  // SSE connection — replaces SWR polling
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    
+    function connect() {
+      const es = new EventSource("/api/scan/stream/active");
+      esRef.current = es;
+
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          // Server signals no more active scans
+          if (data.done) {
+            setActiveScans([]);
+            mutate("/api/dashboard"); // refresh dashboard counts
+            return;
+          }
+
+          if (Array.isArray(data.activeScans)) {
+            setActiveScans(data.activeScans);
+          }
+        } catch {}
+      };
+
+      es.onerror = () => {
+        // On error close and reconnect after 5s
+        es.close();
+        setTimeout(connect, 5000);
+      };
+    }
+
+    connect();
+    return () => esRef.current?.close();
+  }, [status]);
+
+  // Auto-sync: pull GitLab status, throttled to once every 5s
   useEffect(() => {
     if (activeScans.length === 0) return;
-    
-    // Throttle: sync ทุก 3 วินาที
-    const now = Date.now();
-    if (now - lastSyncRef.current < 3000) return;
-    lastSyncRef.current = now;
+    const n = Date.now();
+    if (n - lastSyncRef.current < 5000) return;
+    lastSyncRef.current = n;
 
-    // Sync แต่ละ scan via /sync endpoint
     activeScans.forEach(async (scan) => {
       try {
         await fetch(`/api/scan/${scan.id}/sync`, { method: "POST" });
-      } catch (e) {
-        // Ignore errors
-      }
+      } catch {}
     });
 
-    // Refresh active scans list และ dashboard หลัง sync
-    setTimeout(() => {
-      mutate("/api/scan/status/active");
-      mutate("/api/dashboard");
-    }, 1000);
+    setTimeout(() => mutate("/api/dashboard"), 1200);
   }, [activeScans]);
 
-  // ถ้ามี error หรือไม่มี data ให้ซ่อนไปเลย
-  if (error) return null;
-
-  // ถ้าไม่มีการ Scan ให้ซ่อนไปเลย
-  if (activeScans.length === 0) return null;
+  if (status !== "authenticated" || activeScans.length === 0) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-10 duration-300">
@@ -94,81 +120,90 @@ export default function ActiveScanMonitor() {
               Processing ({activeScans.length})
             </span>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setIsMinimized(!isMinimized)}
-              className="text-blue-100 hover:text-white p-1 hover:bg-white/10 rounded transition"
-            >
-              {isMinimized ? <Maximize2 size={14} /> : <Minus size={14} />}
-            </button>
-          </div>
+          <button
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="text-blue-100 hover:text-white p-1 hover:bg-white/10 rounded transition"
+          >
+            {isMinimized ? <Maximize2 size={14} /> : <Minus size={14} />}
+          </button>
         </div>
 
         {/* Body */}
         {!isMinimized && (
           <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
             {activeScans.map((scan, index) => {
-               // Improved Estimation utilizing averageDuration
-               let etaText = "";
-               if (scan.status === "RUNNING") {
-                  // If there's a historical average, add a 15-minute buffer (900000ms), else default to 20 mins (1200000ms)
-                  const avgDurationMs = scan.service?.averageDuration ? (scan.service.averageDuration + 900000) : 1200000;
-                  const startedAtTime = new Date(scan.startedAt || Date.now()).getTime();
-                  const elapsedMs = Date.now() - startedAtTime;
-                  const remainingMs = Math.max(60000, avgDurationMs - elapsedMs); // Minimum 1 minute
-                  const mins = Math.ceil(remainingMs / 60000);
-                  etaText = `about ${mins} mins left`;
-               } else {
-                  etaText = `about ${(index + 1) * 3} mins wait`;
-               }
-               
-               return (
-              <Link
-                key={scan.id}
-                href={scan.pipelineId ? `/scan/${scan.pipelineId}` : "#"}
-                className="block px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition group relative overflow-hidden"
-              >
-                {/* Progress Bar Animation Backdrop */}
-                {scan.status === "RUNNING" && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-100 dark:bg-blue-900/30">
-                    <div className="h-full bg-blue-500 dark:bg-blue-400 animate-progress"></div>
-                  </div>
-                )}
+              // ETA using the 1s-ticking `now`
+              let etaText = "";
+              if (scan.status === "RUNNING") {
+                const avgMs = scan.service?.averageDuration
+                  ? scan.service.averageDuration + 900_000
+                  : 1_200_000;
+                const startedMs = new Date(scan.startedAt || now).getTime();
+                const remainingMs = Math.max(0, avgMs - (now - startedMs));
+                etaText = formatEta(remainingMs);
+              } else {
+                etaText = `~${(index + 1) * 3}m wait`;
+              }
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-8 h-8 rounded-full flex-shrink-0 dark:bg-blue-900/30 flex items-center justify-center ${scan.status === "RUNNING" ? "bg-blue-50" : "bg-slate-100"}`}>
-                      {scan.status === "RUNNING" ? (
-                         <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
-                      ) : (
-                         <span className="text-xs font-bold text-slate-500">{index + 1}</span>
-                      )}
+              return (
+                <Link
+                  key={scan.id}
+                  href={scan.pipelineId ? `/scan/${scan.pipelineId}` : "#"}
+                  className="block px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition group relative overflow-hidden"
+                >
+                  {scan.status === "RUNNING" && (
+                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-100 dark:bg-blue-900/30">
+                      <div className="h-full bg-blue-500 dark:bg-blue-400 animate-progress" />
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
-                        {scan.service?.serviceName || "Unknown Service"}
-                      </p>
-                      <div className="flex items-center gap-2">
-                         <p className="text-xs text-slate-500 font-mono">
-                           {scan.status}
-                         </p>
-                         {scan.status === "QUEUED" && (
-                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">
-                               Wait: {etaText}
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${
+                          scan.status === "RUNNING"
+                            ? "bg-blue-50 dark:bg-blue-900/30"
+                            : "bg-slate-100 dark:bg-slate-800"
+                        }`}
+                      >
+                        {scan.status === "RUNNING" ? (
+                          <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
+                        ) : (
+                          <span className="text-xs font-bold text-slate-500">
+                            {index + 1}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
+                          {scan.service?.serviceName || "Unknown Service"}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-slate-500 font-mono">
+                            {scan.status}
+                          </p>
+                          {(scan.status === "QUEUED" ||
+                            scan.status === "RUNNING") && (
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1 ${
+                                scan.status === "RUNNING"
+                                  ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300"
+                                  : "bg-slate-100 text-slate-500"
+                              }`}
+                            >
+                              <Timer size={9} />
+                              {etaText}
                             </span>
-                         )}
-                         {scan.status === "RUNNING" && (
-                            <span className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
-                               {etaText}
-                            </span>
-                         )}
+                          )}
+                        </div>
                       </div>
                     </div>
+                    <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition -translate-x-2 group-hover:translate-x-0 opacity-0 group-hover:opacity-100" />
                   </div>
-                  <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition -translate-x-2 group-hover:translate-x-0 opacity-0 group-hover:opacity-100" />
-                </div>
-              </Link>
-            )})} 
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

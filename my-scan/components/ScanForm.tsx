@@ -16,6 +16,9 @@ import {
   ShieldCheck,
   X,
   Tag,
+  Plus,
+  Trash2,
+  Settings2,
 } from "lucide-react";
 import DuplicateServiceWarning from "@/components/DuplicateServiceWarning";
 
@@ -66,6 +69,9 @@ function ScanFormContent({ buildMode }: Props) {
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // [NEW] Custom build args state
+  const [buildArgPairs, setBuildArgPairs] = useState<{ key: string; value: string }[]>([]);
 
   // Duplicate detection state
   const [duplicateService, setDuplicateService] = useState<any>(null);
@@ -183,8 +189,12 @@ function ScanFormContent({ buildMode }: Props) {
           scanMode: buildMode ? "SCAN_AND_BUILD" : "SCAN_ONLY",
           imageTag: imageTag || (buildMode ? "latest" : `audit-${Date.now()}`),
           trivyScanMode,
-          description, // [NEW] Pass description
-          force: forceCreate, // Pass force parameter
+          description,
+          force: forceCreate,
+          // [NEW] Send build args as a key->value map (skip empty keys)
+          buildArgs: buildMode && buildArgPairs.length > 0
+            ? Object.fromEntries(buildArgPairs.filter(p => p.key.trim()).map(p => [p.key.trim(), p.value]))
+            : undefined,
         }),
       });
 
@@ -420,6 +430,64 @@ function ScanFormContent({ buildMode }: Props) {
                         {TEMPLATE_OPTIONS.find((t) => t.value === selectedTemplate)?.label}
                       </div>
                     )}
+
+                    {/* [NEW] Build Arguments */}
+                    <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                        onClick={() => setBuildArgPairs(p => p.length === 0 ? [{ key: "", value: "" }] : p)}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Settings2 size={13} className="text-amber-500" />
+                          BUILD ARGUMENTS
+                          {buildArgPairs.length > 0 && (
+                            <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                              {buildArgPairs.filter(p => p.key.trim()).length}
+                            </span>
+                          )}
+                        </span>
+                        <Plus size={13} onClick={(e) => { e.stopPropagation(); setBuildArgPairs(p => [...p, { key: "", value: "" }]); }} className="hover:text-blue-500 transition-colors" />
+                      </button>
+                      {buildArgPairs.length > 0 && (
+                        <div className="p-3 space-y-2 bg-white dark:bg-slate-950">
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-2">
+                            Passed as <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">--build-arg KEY=VALUE</code> to Docker build.
+                          </p>
+                          {buildArgPairs.map((pair, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <input
+                                placeholder="KEY"
+                                value={pair.key}
+                                onChange={e => setBuildArgPairs(p => p.map((x, j) => j === i ? { ...x, key: e.target.value } : x))}
+                                className="flex-1 px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded text-xs font-mono bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-amber-400"
+                              />
+                              <span className="text-slate-400 text-xs">=</span>
+                              <input
+                                placeholder="value"
+                                value={pair.value}
+                                onChange={e => setBuildArgPairs(p => p.map((x, j) => j === i ? { ...x, value: e.target.value } : x))}
+                                className="flex-1 px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded text-xs font-mono bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-amber-400"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setBuildArgPairs(p => p.filter((_, j) => j !== i))}
+                                className="text-slate-400 hover:text-red-500 transition-colors"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setBuildArgPairs(p => [...p, { key: "", value: "" }])}
+                            className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1 mt-1"
+                          >
+                            <Plus size={11} /> Add Variable
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (
