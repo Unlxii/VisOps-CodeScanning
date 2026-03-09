@@ -6,6 +6,7 @@ import "driver.js/dist/driver.css";
 import "./driver.css"; // Custom Premium Theme
 import { useTheme } from "next-themes";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 interface TourContextType {
   startTour: () => void;
@@ -20,6 +21,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   useEffect(() => {
     // Determine colors based on theme, but we need to wait for mount to be sure
@@ -119,9 +121,10 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
     setDriverObj(driverInstance);
     
-    // Auto-start only on Dashboard for new users
+    // Auto-start only on Dashboard for users who have completed setup
     const hasSeenTour = localStorage.getItem("visops-tour-completed");
-    if (!hasSeenTour && pathname === "/dashboard") {
+    const isSetupDone = (session?.user as any)?.isSetupComplete;
+    if (!hasSeenTour && pathname === "/dashboard" && isSetupDone) {
        // Small delay to ensure UI renders
        setTimeout(() => {
            driverInstance.drive();
@@ -130,7 +133,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
        }, 1000);
     }
 
-  }, [pathname, theme]);
+  }, [pathname, theme, session]);
 
   const startTour = () => {
     if (driverObj) {
