@@ -45,7 +45,7 @@ export default function AdminUsersPage() {
   const [activeTab, setActiveTab] = useState<"ALL" | "ADMIN" | "USER" | "PENDING">(
     (searchParams.get("tab") as any) || "ALL"
   );
-  const [sortField, setSortField] = useState<keyof User | "stats.projects">("createdAt");
+  const [sortField, setSortField] = useState<keyof User | "maxProjects">("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -163,7 +163,7 @@ export default function AdminUsersPage() {
   const totalStandard = userList.filter(u => u.role !== "ADMIN" && u.role !== "SUPERADMIN").length || 0;
 
   // Handlers
-  const handleSort = (field: keyof User | "stats.projects") => {
+  const handleSort = (field: keyof User | "maxProjects") => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -218,9 +218,9 @@ export default function AdminUsersPage() {
       let valA: any = a[sortField as keyof User];
       let valB: any = b[sortField as keyof User];
 
-      if (sortField === "stats.projects") {
-          valA = a.stats?.projects || 0;
-          valB = b.stats?.projects || 0;
+      if (sortField === ("maxProjects" as keyof User)) {
+          valA = a.maxProjects || 0;
+          valB = b.maxProjects || 0;
       }
 
       if (valA === valB) return 0;
@@ -321,7 +321,7 @@ export default function AdminUsersPage() {
                 )}
                 <SortHeader label="User" field="name" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[30%]" />
                 <SortHeader label="Role" field="role" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[10%]" />
-                <SortHeader label="Quota" field="stats.projects" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[10%]" />
+                <SortHeader label="Quota" field="maxProjects" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[10%]" />
                 <SortHeader label="Status" field="status" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[15%]" />
                 <SortHeader label="Joined" field="createdAt" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort} className="w-[15%]" />
                 <th className="px-6 py-3 font-medium text-right min-w-[120px]">Actions</th>

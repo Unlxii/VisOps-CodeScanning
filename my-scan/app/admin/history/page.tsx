@@ -58,6 +58,10 @@ export default function AdminHistoryPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Sort States
+  const [sortField, setSortField] = useState<"createdAt" | "findings">("createdAt");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
   // Filter States
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [userFilter, setUserFilter] = useState<string>("ALL");
@@ -73,12 +77,8 @@ export default function AdminHistoryPage() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          const sortedData = [...data].sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          setHistory(sortedData);
-          setFilteredHistory(sortedData);
+          setHistory(data);
+          setFilteredHistory(data);
         }
       }
     } catch (error) {
@@ -200,9 +200,34 @@ export default function AdminHistoryPage() {
       );
     }
 
+    // Apply Sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortField === "createdAt") {
+        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      } else if (sortField === "findings") {
+        // Calculate a weighted score for findings (Criticals are heaviest)
+        const scoreA = (a.vulnCritical * 1000) + (a.vulnHigh * 100) + (a.vulnMedium * 10) + a.vulnLow;
+        const scoreB = (b.vulnCritical * 1000) + (b.vulnHigh * 100) + (b.vulnMedium * 10) + b.vulnLow;
+        comparison = scoreA - scoreB;
+      }
+      
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+
     setFilteredHistory(filtered);
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, userFilter, dateFrom, dateTo, history]);
+  }, [searchTerm, statusFilter, userFilter, dateFrom, dateTo, history, sortField, sortDirection]);
+
+  const handleSort = (field: "createdAt" | "findings") => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("desc"); // Default to desc when changing fields
+    }
+  };
 
   // Pagination Logic
   const totalPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE);
@@ -450,6 +475,43 @@ export default function AdminHistoryPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+
+          <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+            {/* Status Filter Dropdown */}
+            <div className="relative shrink-0">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Filter className="h-4 w-4 text-slate-400" />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="pl-9 pr-8 py-2 w-full sm:w-40 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-slate-700 dark:text-slate-300"
+              >
+                <option value="ALL">All Status</option>
+                <option value="SUCCESS">Success</option>
+                <option value="FAILED">Failed</option>
+                <option value="RUNNING">Running</option>
+                <option value="QUEUED">Queued</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <ArrowUpRight className="h-4 w-4 text-slate-400 rotate-90" />
+              </div>
+            </div>
+            
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:border-purple-500 min-w-[130px]"
+            />
+            <span className="text-slate-400 self-center">-</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:border-purple-500 min-w-[130px]"
+            />
+          </div>
         </div>
 
         {/* Table */}
@@ -470,8 +532,28 @@ export default function AdminHistoryPage() {
                   <th className="px-6 py-4">User / Group</th>
                   <th className="px-6 py-4">Service / Pipeline</th>
                   <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Findings</th>
-                  <th className="px-6 py-4">Executed At</th>
+                  <th 
+                    className="px-6 py-4 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200 group transition-colors"
+                    onClick={() => handleSort("findings")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Findings
+                      {sortField === "findings" && (
+                        <ArrowUpRight className={`w-3.5 h-3.5 transition-transform ${sortDirection === "desc" ? "rotate-90" : "-rotate-45"}`} />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200 group transition-colors"
+                    onClick={() => handleSort("createdAt")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Executed At
+                      {sortField === "createdAt" && (
+                        <ArrowUpRight className={`w-3.5 h-3.5 transition-transform ${sortDirection === "desc" ? "rotate-90" : "-rotate-45"}`} />
+                      )}
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
