@@ -4,19 +4,19 @@ VisScan is a comprehensive security tool designed to automate static analysis an
 
 ## Features
 
-- **Static Analysis**: Detects secrets, hardcoded credentials, and common code vulnerabilities.
-- **Container Scanning**: Scans Docker images for known vulnerabilities using Trivy.
-- **Real-time Monitoring**: Track scan progress and view detailed findings directly in the dashboard.
-- **Role-Based Access Control**: Secure access with Superadmin, Admin, and User roles.
-- **Historical Reports**: Maintain a history of security scans for audit and compliance.
+- **Static Analysis**: Detects secrets, hardcoded credentials, and common code vulnerabilities early in the dev cycle.
+- **Container Scanning**: Scans Docker images for known vulnerabilities using industry-standard tools like Trivy.
+- **Real-time Monitoring**: Track scan progress and view detailed findings directly in a dedicated dashboard.
+- **Role-Based Access Control**: Secure management with Superadmin, Admin, and User roles.
+- **Historical Reports**: Maintain a searchable history of security scans for audit and compliance.
 
 ## Prerequisites
 
-- Node.js (v18 or later)
-- PostgreSQL
-- RabbitMQ
-- Docker (for container builds and scans)
-- GitLab Account (for CI/CD integration)
+- **Environment**: Node.js (v18 or later)
+- **Database**: PostgreSQL (v12+)
+- **Queue**: RabbitMQ
+- **Runtime**: Docker (for container builds and scans)
+- **Integration**: GitLab Account (for CI/CD pipeline triggering)
 
 ## Quick Start
 
@@ -32,7 +32,7 @@ VisScan is a comprehensive security tool designed to automate static analysis an
    ```
 
 3. **Configure Environment Variables**:
-   Copy `.env.example` to `.env` and fill in your configuration.
+   Copy `.env.example` to `.env` and update your secrets.
    ```bash
    cp .env.example .env
    ```
@@ -47,22 +47,25 @@ VisScan is a comprehensive security tool designed to automate static analysis an
    # Start the web server
    npm run dev
 
-   # Start the worker
+   # Start the background worker
    npm run worker
    ```
 
 ## Architecture
 
-VisScan uses a distributed architecture:
-- **Web Frontend**: Built with Next.js and Tailwind CSS.
-- **API Server**: tRPC-based server for efficient communication.
-- **Task Worker**: RabbitMQ-driven worker for triggering GitLab pipelines.
-- **Security Engine**: GitLab CI runners executing Gitleaks, Semgrep, and Trivy.
+VisScan follows a modern micro-workflow architecture:
+- **Frontend**: Next.js 14 (App Router) + Tailwind CSS.
+- **API Server**: Type-safe tRPC for robust data fetching.
+- **Task Worker**: Distributed RabbitMQ workers for reliable pipeline triggering.
+- **Security Engine**: Automated GitLab CI runners executing Gitleaks, Semgrep, and Trivy.
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines before submitting a pull request.
+Contributions make the open-source community an amazing place! Please check our guidelines.
 
 ## License
 
-This project is licensed under the MIT License.
+Distributed under the MIT License. See LICENSE for more information.
+
+---
+Built for secure development.
