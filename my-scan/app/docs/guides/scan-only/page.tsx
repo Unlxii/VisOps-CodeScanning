@@ -80,11 +80,11 @@ export default function ScanOnlyGuidePage() {
             </h2>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-100 dark:border-red-800">
-                <h3 className="font-medium text-red-700 dark:text-red-400 mb-2">⚠ Critical Findings</h3>
+                <h3 className="font-medium text-red-700 dark:text-red-400 mb-2"> Critical Findings</h3>
                 <p className="text-sm text-red-600 dark:text-red-300">สิ่งที่ต้องแก้ไขทันที เช่น Private Key หรือ API Token ที่หลุดมาในโค้ด</p>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-100 dark:border-blue-800">
-                <h3 className="font-medium text-blue-700 dark:text-blue-400 mb-2">📄 Report File</h3>
+                <h3 className="font-medium text-blue-700 dark:text-blue-400 mb-2">� Report File</h3>
                 <p className="text-sm text-blue-600 dark:text-blue-300">ระบบจะสร้างไฟล์ JSON Report ให้ดาวน์โหลดเมื่อกระบวนการเสร็จสิ้น</p>
               </div>
             </div>

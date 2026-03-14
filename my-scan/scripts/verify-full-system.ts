@@ -6,13 +6,13 @@ import { publishScanJob } from "../lib/queue/publisher";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🔍 Starting Full System Verification...");
+  console.log("� Starting Full System Verification...");
 
   const user = await prisma.user.findFirst();
   if (!user) throw new Error("No user found");
 
   // --- 1. Verify Dockerfile Logic ---
-  console.log("\n[1/3] 🐳 Verifying Dockerfile Logic...");
+  console.log("\n[1/3] � Verifying Dockerfile Logic...");
   
   // Create/Get Service
   let group = await prisma.projectGroup.findFirst({ where: { userId: user.id, groupName: "Verification Group" } });
@@ -85,7 +85,7 @@ async function main() {
      });
   }
   
-  console.log(`   ✅ Published 20 jobs. Monitoring state for 60s (Expect ~6 RUNNING, <14 QUEUED)...`);
+  console.log(`    Published 20 jobs. Monitoring state for 60s (Expect ~6 RUNNING, <14 QUEUED)...`);
   
   // Monitor
   let timeLeft = 60;
@@ -102,7 +102,7 @@ async function main() {
       timeLeft -= 5;
       if (timeLeft <= 0) {
           clearInterval(interval);
-          console.log("\n[3/3] 🏁 Verification Complete.");
+          console.log("\n[3/3] � Verification Complete.");
           
           if (counts['RUNNING'] > 0 || counts['SUCCESS'] > 0 || counts['FAILED'] > 0) {
                console.log("    Jobs are being picked up by worker.");
@@ -112,7 +112,7 @@ async function main() {
                    console.log("  Queue holding excess jobs (Backpressure active).");
                }
           } else {
-               console.log("   ⚠️ Jobs remain QUEUED. Is the worker running?");
+               console.log("    Jobs remain QUEUED. Is the worker running?");
           }
           
           process.exit(0);

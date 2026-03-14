@@ -5,10 +5,16 @@
 jest.mock('@/lib/prisma', () => {
   return {
     prisma: {
+      user: {
+        findUnique: jest.fn(),
+      },
       projectGroup: {
         count: jest.fn(),
         findFirst: jest.fn(),
         update: jest.fn(),
+      },
+      projectService: {
+        count: jest.fn(),
       },
       scanHistory: {
         findFirst: jest.fn(),
@@ -38,7 +44,8 @@ describe('QuotaManager Module', () => {
 
   describe('checkUserQuota', () => {
     it('should return canCreate: true when user has less than 6 projects', async () => {
-      (mockPrisma.projectGroup.count as jest.Mock).mockResolvedValue(3);
+      (mockPrisma.projectService.count as jest.Mock).mockResolvedValue(3);
+      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ maxProjects: 6 });
       
       const result = await checkUserQuota('user-123');
       
@@ -49,7 +56,8 @@ describe('QuotaManager Module', () => {
     });
 
     it('should return canCreate: false when user has 6 projects', async () => {
-      (mockPrisma.projectGroup.count as jest.Mock).mockResolvedValue(6);
+      (mockPrisma.projectService.count as jest.Mock).mockResolvedValue(6);
+      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ maxProjects: 6 });
       
       const result = await checkUserQuota('user-123');
       
@@ -59,7 +67,8 @@ describe('QuotaManager Module', () => {
     });
 
     it('should return canCreate: false when user has more than 6 projects', async () => {
-      (mockPrisma.projectGroup.count as jest.Mock).mockResolvedValue(10);
+      (mockPrisma.projectService.count as jest.Mock).mockResolvedValue(10);
+      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ maxProjects: 6 });
       
       const result = await checkUserQuota('user-123');
       
@@ -68,7 +77,8 @@ describe('QuotaManager Module', () => {
     });
 
     it('should return canCreate: true when user has 0 projects', async () => {
-      (mockPrisma.projectGroup.count as jest.Mock).mockResolvedValue(0);
+      (mockPrisma.projectService.count as jest.Mock).mockResolvedValue(0);
+      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ maxProjects: 6 });
       
       const result = await checkUserQuota('user-123');
       
@@ -77,7 +87,8 @@ describe('QuotaManager Module', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-      (mockPrisma.projectGroup.count as jest.Mock).mockRejectedValue(new Error('Database connection failed'));
+      (mockPrisma.projectService.count as jest.Mock).mockRejectedValue(new Error('Database connection failed'));
+      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ maxProjects: 6 });
       
       const result = await checkUserQuota('user-123');
       

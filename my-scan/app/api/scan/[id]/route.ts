@@ -186,7 +186,7 @@ export async function GET(
       // ส่ง Status เป็น Uppercase เพื่อให้ตรงกับ TypeScript ใน Frontend
       status: scan.status,
       scanMode: scan.scanMode,
-      imagePushed: scan.imagePushed, // ✅ Return this field
+      imagePushed: scan.imagePushed, //  Return this field
 
       step: step,
       progress: progress,

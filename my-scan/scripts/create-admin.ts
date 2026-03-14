@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 async function main() {
   const email = process.argv[2] || "UNLXI";
   const providedPassword = process.argv[3];
-  const password = providedPassword || "@UnlxiVisScan1234*"; // Default secure password
+  const password = providedPassword || process.env.ADMIN_PASSWORD || "ChangeMe1234!"; // Use env or safe default
   const hashedPassword = await bcrypt.hash(password, 12);
 
   try {
@@ -30,15 +30,15 @@ async function main() {
         });
         console.log(`
         ---------------------------------------------------
-        ✅ Superadmin found: ${email}
-        🔄 Password reset successfully.
-        🔑 Password: ${password}
+        [INFO] Superadmin found: ${email}
+        [INFO] Password reset successfully.
+        [INFO] Password: ${password}
         ---------------------------------------------------
         `);
         return;
       } else {
         console.error(`
-        ❌ ERROR: A Superadmin account already exists in the system.
+        [ERROR] A Superadmin account already exists in the system.
         For security reasons, this system strictly allows only ONE Superadmin.
         Creation of additional admins is blocked.
         (To reset the password, run the script with the EXACT existing superadmin username.)
@@ -58,9 +58,9 @@ async function main() {
       });
       console.log(`
       ---------------------------------------------------
-      ✅ User found: ${email}
-      👑 Promoted to Superadmin successfully.
-      🔑 Password: ${password}
+      [INFO] User found: ${email}
+      [INFO] Promoted to Superadmin successfully.
+      [INFO] Password: ${password}
       ---------------------------------------------------
       `);
     } else {
@@ -76,15 +76,15 @@ async function main() {
       });
       console.log(`
       ---------------------------------------------------
-      ✅ Superadmin user created: ${email}
-      🔑 Password: ${password}
+      [INFO] Superadmin user created: ${email}
+      [INFO] Password: ${password}
       ---------------------------------------------------
-      ⚠️ SAVE THIS SECURELY. ONLY 1 SUPERADMIN IS ALLOWED.
+      [WARNING] SAVE THIS SECURELY. ONLY 1 SUPERADMIN IS ALLOWED.
       ---------------------------------------------------
       `);
     }
   } catch (err) {
-      console.error("❌ Failed to create/update admin:", err);
+      console.error("[ERROR] Failed to create/update admin:", err);
       process.exit(1);
   }
 }

@@ -22,7 +22,7 @@ export default async function ScanPage(props: Props) {
   const id = params.id;
 
   if (!id) {
-    console.error("❌ No pipeline ID provided");
+    console.error(" No pipeline ID provided");
     notFound();
   }
 
@@ -70,7 +70,7 @@ export default async function ScanPage(props: Props) {
     });
 
     if (!scanData) {
-      console.error("❌ No scan data found for ID:", id);
+      console.error(" No scan data found for ID:", id);
       notFound();
     }
 
@@ -240,7 +240,7 @@ export default async function ScanPage(props: Props) {
       </main>
     );
   } catch (error) {
-    console.error("💥 Error in ScanPage:", error);
+    console.error("� Error in ScanPage:", error);
     throw error;
   }
 }

@@ -23,7 +23,7 @@ export default function Sidebar({ isAdmin, isSuperAdmin }: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // ✅ State สำหรับจัดการ Tooltip แบบ Fixed Position
+  //  State สำหรับจัดการ Tooltip แบบ Fixed Position
   const [hoveredItem, setHoveredItem] = useState<{
     label: string;
     top: number;
@@ -54,7 +54,7 @@ export default function Sidebar({ isAdmin, isSuperAdmin }: SidebarProps) {
     e.stopPropagation();
   };
 
-  // ✅ ฟังก์ชันคำนวณตำแหน่ง Tooltip
+  //  ฟังก์ชันคำนวณตำแหน่ง Tooltip
   const handleMouseEnter = (e: React.MouseEvent, label: string) => {
     if (isCollapsed) {
       const rect = e.currentTarget.getBoundingClientRect();
@@ -93,7 +93,7 @@ export default function Sidebar({ isAdmin, isSuperAdmin }: SidebarProps) {
         </div>
 
         {/* 2. Navigation List */}
-        {/* ✅ แก้ไข: ใช้ overflow-hidden ปกติ เพื่อตัด Scrollbar ทิ้งไปเลย */}
+        {/*  แก้ไข: ใช้ overflow-hidden ปกติ เพื่อตัด Scrollbar ทิ้งไปเลย */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 space-y-6 scrollbar-hide">
           {/* Main Menu */}
           <div className="space-y-1">
@@ -230,7 +230,7 @@ export default function Sidebar({ isAdmin, isSuperAdmin }: SidebarProps) {
         </div>
       </aside>
 
-      {/* ✅ Tooltip Layer (Render Outside Sidebar) */}
+      {/*  Tooltip Layer (Render Outside Sidebar) */}
       {/* ใช้ position: fixed เพื่อให้ลอยเหนือทุกอย่างและไม่ดัน layout */}
       {isCollapsed && hoveredItem && (
         <div

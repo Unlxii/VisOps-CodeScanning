@@ -111,7 +111,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
         },
         {
           popover: {
-            title: "You're All Set! 🎉",
+            title: "You're All Set! �",
             description: "That covers the basics. You are now ready to start building secure software. Happy coding!",
             align: "center",
           },

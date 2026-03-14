@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 async function main() {
   const rl = readline.createInterface({ input, output });
 
-  console.log("🛠️  Create Test User (Development Only) 🛠️");
+  console.log("�  Create Test User (Development Only) �");
   console.log("------------------------------------------");
 
   try {
@@ -21,7 +21,7 @@ async function main() {
     let role = await rl.question("Enter Role (user/ADMIN) (default: user): ") || "user";
     if (role.toLowerCase() === "admin") role = "ADMIN";
     if (role !== "user" && role !== "ADMIN") {
-      console.log("⚠️  Invalid role. Defaulting to 'user'.");
+      console.log("  Invalid role. Defaulting to 'user'.");
       role = "user";
     }
 
@@ -46,15 +46,15 @@ async function main() {
       },
     });
 
-    console.log("\n✅ User created successfully!");
+    console.log("\n User created successfully!");
     console.log(`   Name: ${user.name}`);
     console.log(`   Email: ${user.email}`);
     console.log(`   Role: ${user.role}`);
     console.log(`   Password: ${password}`);
-    console.log("\n👉 You can now login with these credentials at /login");
+    console.log("\n� You can now login with these credentials at /login");
 
   } catch (error) {
-    console.error("❌ Error creating user:", error);
+    console.error(" Error creating user:", error);
   } finally {
     rl.close();
     await prisma.$disconnect();

@@ -16,7 +16,7 @@ const customJestConfig = {
     '^@components/(.*)$': '<rootDir>/components/$1',
     '^@app/(.*)$': '<rootDir>/app/$1',
   },
-  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/', '<rootDir>/e2e/'],
   coveragePathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
   collectCoverageFrom: [
     'lib/**/*.{js,jsx,ts,tsx}',

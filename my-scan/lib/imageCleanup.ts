@@ -27,13 +27,13 @@ export async function deleteBlockedImage(
   const agent = new https.Agent({ rejectUnauthorized: false });
 
   if (!baseUrl || !token) {
-    console.error("❌ Missing GitLab configuration for image cleanup");
+    console.error(" Missing GitLab configuration for image cleanup");
     return { success: false, message: "Missing GitLab configuration" };
   }
 
   try {
     console.log(
-      `🗑️  Attempting to delete blocked image for pipeline ${pipelineId}`
+      `�  Attempting to delete blocked image for pipeline ${pipelineId}`
     );
 
     // Get repositories in the project
@@ -46,7 +46,7 @@ export async function deleteBlockedImage(
     );
 
     if (!reposRes.data || reposRes.data.length === 0) {
-      console.log("⚠️  No container registry repositories found");
+      console.log("  No container registry repositories found");
       return { success: true, message: "No images to delete" };
     }
 
@@ -57,7 +57,7 @@ export async function deleteBlockedImage(
     );
 
     if (!repo) {
-      console.log(`⚠️  Repository not found for image: ${imageName}`);
+      console.log(`  Repository not found for image: ${imageName}`);
       return { success: true, message: "Image repository not found" };
     }
 
@@ -71,7 +71,7 @@ export async function deleteBlockedImage(
     );
 
     if (!tagsRes.data || tagsRes.data.length === 0) {
-      console.log("⚠️  No tags found in repository");
+      console.log("  No tags found in repository");
       return { success: true, message: "No image tags to delete" };
     }
 
@@ -81,7 +81,7 @@ export async function deleteBlockedImage(
       : tagsRes.data[0]; // Delete latest if no specific tag
 
     if (!tagToDelete) {
-      console.log(`⚠️  Tag not found: ${imageTag}`);
+      console.log(`  Tag not found: ${imageTag}`);
       return { success: true, message: "Image tag not found" };
     }
 
@@ -95,7 +95,7 @@ export async function deleteBlockedImage(
     );
 
     console.log(
-      `✅ Successfully deleted image: ${repo.path}:${tagToDelete.name}`
+      ` Successfully deleted image: ${repo.path}:${tagToDelete.name}`
     );
     return {
       success: true,
@@ -103,11 +103,11 @@ export async function deleteBlockedImage(
     };
   } catch (error: any) {
     if (error.response?.status === 404) {
-      console.log("⚠️  Image or tag not found (may already be deleted)");
+      console.log("  Image or tag not found (may already be deleted)");
       return { success: true, message: "Image already deleted or not found" };
     }
 
-    console.error("❌ Error deleting blocked image:", error.message);
+    console.error(" Error deleting blocked image:", error.message);
     return {
       success: false,
       message: `Failed to delete image: ${error.message}`,

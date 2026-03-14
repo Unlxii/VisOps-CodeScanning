@@ -294,7 +294,7 @@ export default function InfiniteCanvasComparePage() {
         </Link>
       </div>
 
-      {/* ✅ Application Frame: This mimics a window inside the dashboard */}
+      {/*  Application Frame: This mimics a window inside the dashboard */}
       <div className="flex flex-1 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-slate-900 h-[calc(100vh-10rem)]">
         {/* Left Sidebar: Report List */}
         <aside className="w-64 bg-slate-50/50 dark:bg-slate-900/50 border-r border-slate-200 dark:border-slate-800 flex flex-col z-10 shrink-0">

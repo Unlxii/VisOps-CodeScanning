@@ -44,8 +44,8 @@ export async function POST(
     const token = process.env.GITLAB_TOKEN;
     const agent = new https.Agent({ rejectUnauthorized: false });
 
-    console.log(`🚀 Release Request received for Pipeline: ${pipelineId}`);
-    console.log(`📦 GitLab Project ID: ${projectId}`);
+    console.log(` Release Request received for Pipeline: ${pipelineId}`);
+    console.log(`� GitLab Project ID: ${projectId}`);
 
     // 2. Find the specific pipeline
     // URL is already .../api/v4 in .env, so we append /projects/...
@@ -125,7 +125,7 @@ export async function POST(
       buildStatus: playRes.data.status,
     });
   } catch (err: any) {
-    console.error("❌ API ERROR:", err.message);
+    console.error(" API ERROR:", err.message);
     console.error("Error details:", err.response?.data || err.stack);
     return NextResponse.json(
       {

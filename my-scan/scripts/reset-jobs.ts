@@ -5,7 +5,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🧹 Cleaning up all Scan Jobs...");
+  console.log("� Cleaning up all Scan Jobs...");
 
   const deleted = await prisma.scanHistory.deleteMany({
       where: {
@@ -13,7 +13,7 @@ async function main() {
       }
   });
 
-  console.log(`✅ Deleted ${deleted.count} active jobs.`);
+  console.log(` Deleted ${deleted.count} active jobs.`);
   
   // Optional: Delete all history for cleaner view
   // await prisma.scanHistory.deleteMany({});

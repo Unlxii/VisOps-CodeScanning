@@ -70,7 +70,7 @@ export async function POST(
     ).replace(/\/$/, "");
 
     console.log(
-      `🔴 Attempting to cancel GitLab pipeline ${gitlabPipelineId} in project ${gitlabProjectId}`
+      ` Attempting to cancel GitLab pipeline ${gitlabPipelineId} in project ${gitlabProjectId}`
     );
 
     if (gitlabToken && gitlabProjectId) {
@@ -89,21 +89,21 @@ export async function POST(
         if (!response.ok) {
           const errorText = await response.text();
           console.error(
-            `❌ GitLab cancel failed: ${response.status} - ${errorText}`
+            ` GitLab cancel failed: ${response.status} - ${errorText}`
           );
           // Don't fail the entire operation if GitLab cancel fails
         } else {
           console.log(
-            `✅ GitLab pipeline cancelled successfully: ${gitlabPipelineId}`
+            ` GitLab pipeline cancelled successfully: ${gitlabPipelineId}`
           );
         }
       } catch (error) {
-        console.error("❌ Error cancelling GitLab pipeline:", error);
+        console.error(" Error cancelling GitLab pipeline:", error);
         // Don't fail the entire operation
       }
     } else {
       console.warn(
-        "⚠️  GitLab credentials missing - cannot cancel pipeline in GitLab"
+        "  GitLab credentials missing - cannot cancel pipeline in GitLab"
       );
     }
 

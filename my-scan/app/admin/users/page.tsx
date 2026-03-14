@@ -136,7 +136,7 @@ export default function AdminUsersPage() {
       if (!res.ok) throw new Error("Failed to update quota");
       refetchUsers(); // Refresh user list
       setEditingQuotaId(null);
-      alert(`✅ Successfully updated user quota to ${newQuota}`);
+      alert(` Successfully updated user quota to ${newQuota}`);
     } catch (err) {
       console.error("Quota update failed:", err);
     }

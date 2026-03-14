@@ -71,7 +71,7 @@ export async function checkScanQuota(serviceId: string): Promise<{
     });
 
     if (activeScan) {
-      // ✅ 1. ถ้าสถานะเป็น QUEUED -> ยังไงก็ต้องรอ (Worker ยังไม่หยิบ)
+      //  1. ถ้าสถานะเป็น QUEUED -> ยังไงก็ต้องรอ (Worker ยังไม่หยิบ)
       if (activeScan.status === 'QUEUED') {
         return {
           canScan: false,
@@ -79,7 +79,7 @@ export async function checkScanQuota(serviceId: string): Promise<{
         };
       }
 
-      // ✅ 2. ถ้าสถานะเป็น RUNNING -> เช็คกับ GitLab จริงๆ ว่ายังวิ่งอยู่ไหม?
+      //  2. ถ้าสถานะเป็น RUNNING -> เช็คกับ GitLab จริงๆ ว่ายังวิ่งอยู่ไหม?
       // (กันเหนียวกรณี Worker ตาย หรือ Network หลุด ทำให้สถานะค้าง)
       if (activeScan.status === 'RUNNING' && activeScan.pipelineId) {
         try {

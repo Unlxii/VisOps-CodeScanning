@@ -240,7 +240,7 @@ export default function ServicesPage() {
       {isLimitReached && (
         <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-lg text-red-700 dark:text-red-400 text-sm">
           <div className="flex-shrink-0 w-8 h-8 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-            <span className="text-lg">🚫</span>
+            <span className="text-lg">�</span>
           </div>
           <div>
             <span className="font-semibold">Quota Full ({services.length}/{maxServices})</span>

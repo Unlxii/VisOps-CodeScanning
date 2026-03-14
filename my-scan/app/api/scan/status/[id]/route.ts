@@ -50,7 +50,7 @@ export async function GET(
   }
 
   try {
-    // ✅ STEP 1: ค้นหาใน Database ก่อน เพื่อเอา Project ID (scanId) ที่ถูกต้อง
+    //  STEP 1: ค้นหาใน Database ก่อน เพื่อเอา Project ID (scanId) ที่ถูกต้อง
     // เพราะเราไม่รู้ว่า Pipeline 180 นี้ เป็นของ Project ไหน
     const scanRecord = (await prisma.scanHistory.findFirst({
       where: {
@@ -72,9 +72,9 @@ export async function GET(
 
     const projectId = process.env.GITLAB_PROJECT_ID; // Use configured project ID
 
-    // ✅ STEP 2: ลองเรียก GitLab API ก่อนเสมอ เพื่อเช็คสถานะจริง
+    //  STEP 2: ลองเรียก GitLab API ก่อนเสมอ เพื่อเช็คสถานะจริง
     // ถ้า pipeline ยังไม่มีใน GitLab จะ catch error แล้ว return QUEUED status
-    console.log(`🔍 Fetching Pipeline ${id} from Project ${projectId}`);
+    console.log(`� Fetching Pipeline ${id} from Project ${projectId}`);
 
     let pipelineRes;
     try {
@@ -114,7 +114,7 @@ export async function GET(
       throw gitlabError;
     }
 
-    // ✅ ถ้า GitLab มี pipeline แล้ว → update status ใน database ถ้ายัง QUEUED
+    //  ถ้า GitLab มี pipeline แล้ว → update status ใน database ถ้ายัง QUEUED
     if (scanRecord.status === "QUEUED" || scanRecord.status === "PENDING") {
       await prisma.scanHistory.update({
         where: { id: scanRecord.id },
@@ -123,7 +123,7 @@ export async function GET(
     }
 
     const pipeline = pipelineRes.data;
-    // ⚠️ IMPORTANT: Normalize status to UPPERCASE for consistent comparison
+    //  IMPORTANT: Normalize status to UPPERCASE for consistent comparison
     const gitlabStatus = pipeline.status.toUpperCase();
 
     // คำนวณ Duration
@@ -270,14 +270,14 @@ export async function GET(
             );
 
             console.log(
-              `[${id}] ✅ Fetched ${scanner.name} - Found ${
+              `[${id}]  Fetched ${scanner.name} - Found ${
                 Array.isArray(res.data) ? res.data.length : "N/A"
               } items`
             );
             logs.push(`Parsed ${scanner.name} report.`);
             scanner.parser(res.data);
           } catch (err) {
-            console.error(`[${id}] ❌ Failed to fetch ${scanner.name}:`, err);
+            console.error(`[${id}]  Failed to fetch ${scanner.name}:`, err);
             logs.push(`Failed to fetch/parse ${scanner.name}.`);
           }
         })
@@ -290,15 +290,15 @@ export async function GET(
       logs.push(`Total findings: ${findings.length}`);
 
       // ============================================
-      // 🛑 BLOCKING LOGIC
+      // � BLOCKING LOGIC
       // ============================================
       if (counts.critical > 0) {
         finalStatus = "BLOCKED";
         logs.push(
-          "🚨 Security Policy: Pipeline BLOCKED due to critical vulnerabilities."
+          " Security Policy: Pipeline BLOCKED due to critical vulnerabilities."
         );
 
-        // 🗑️ Auto-delete blocked image
+        // � Auto-delete blocked image
         try {
           const imageInfo = {
             projectId: projectId || "",
@@ -308,18 +308,18 @@ export async function GET(
           };
 
           console.log(
-            `🗑️  Attempting to delete blocked image for pipeline ${id}`
+            `�  Attempting to delete blocked image for pipeline ${id}`
           );
           const deleteResult = await deleteBlockedImage(imageInfo);
 
           if (deleteResult.success) {
-            logs.push(`🗑️  ${deleteResult.message}`);
+            logs.push(`�  ${deleteResult.message}`);
           } else {
-            logs.push(`⚠️  Failed to delete image: ${deleteResult.message}`);
+            logs.push(`  Failed to delete image: ${deleteResult.message}`);
           }
         } catch (cleanupError: any) {
           console.error(`Error during image cleanup:`, cleanupError);
-          logs.push(`⚠️  Image cleanup error: ${cleanupError.message}`);
+          logs.push(`  Image cleanup error: ${cleanupError.message}`);
         }
       }
 
@@ -374,7 +374,7 @@ export async function GET(
     console.error("API Error:", error);
 
     if (axios.isAxiosError(error) && error.response?.status === 404) {
-      // ✅ Pipeline ไม่พบใน GitLab → ส่ง response ที่มีข้อมูลเพิ่มเติม
+      //  Pipeline ไม่พบใน GitLab → ส่ง response ที่มีข้อมูลเพิ่มเติม
       return NextResponse.json(
         {
           error: "Pipeline not found in GitLab",

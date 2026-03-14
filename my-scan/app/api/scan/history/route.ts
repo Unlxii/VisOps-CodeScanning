@@ -37,7 +37,7 @@ export async function GET(req: Request) {
     }
 
     if (projectId) {
-      where.service.group.id = projectId; // ✅ Filter by Project (Group)
+      where.service.group.id = projectId; //  Filter by Project (Group)
     }
 
     // Fetch scans

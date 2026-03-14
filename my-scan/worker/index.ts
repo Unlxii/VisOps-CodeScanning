@@ -20,8 +20,8 @@ const GITLAB_API_URL =
 const GITLAB_TRIGGER_TOKEN = process.env.GITLAB_TRIGGER_TOKEN;
 // [INFO] Use ID 141 as specified (change in .env if needed)
 const GITLAB_PROJECT_ID = process.env.GITLAB_PROJECT_ID;
-if (!GITLAB_PROJECT_ID) {
-  throw new Error("❌ CRITICAL: GITLAB_PROJECT_ID is missing in .env");
+  if (!GITLAB_PROJECT_ID) {
+  throw new Error("[CRITICAL] GITLAB_PROJECT_ID is missing in .env");
 }
 
 // Debug: Check if Token exists (showing last 4 chars)
@@ -58,8 +58,6 @@ async function startWorker() {
     console.log("[Worker] Connected to RabbitMQ");
 
     // --- Channels ---
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buildChannel = (await conn.createChannel()) as any;
     await setupQueue(buildChannel, BUILD_QUEUE_NAME);
     // [INFO] Single Runner Limits: Scaled to 5 for 8-Core/16GB RAM VM
@@ -68,8 +66,6 @@ async function startWorker() {
       if (msg) handleMessage(msg, buildChannel);
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const scanChannel = (await conn.createChannel()) as any;
     await setupQueue(scanChannel, SCAN_QUEUE_NAME);
     // [INFO] Single Runner Limits: Scaled to 5 for 8-Core/16GB RAM VM

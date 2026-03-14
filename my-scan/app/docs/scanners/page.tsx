@@ -134,7 +134,7 @@ export default function ScannerDocsPage() {
                   </div>
                   <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
                     <h3 className="text-xs font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wider mb-3 flex items-center gap-1">
-                      ⚠ Limitations
+                       Limitations
                     </h3>
                     <ul className="space-y-1.5 text-sm text-slate-600 dark:text-slate-400">
                       {tool.limitations.map((item, i) => (

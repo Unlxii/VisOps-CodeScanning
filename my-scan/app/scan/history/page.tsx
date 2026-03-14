@@ -477,7 +477,7 @@ function ScanHistoryContent() {
             </div>
           </div>
 
-          {/* ✅ Pagination Footer */}
+          {/*  Pagination Footer */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-2 py-4">
               <div className="text-sm text-slate-500 dark:text-slate-400">

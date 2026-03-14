@@ -38,7 +38,7 @@ async function main() {
 
     console.log(` Upgrade complete! ${oldestAdmin.email} is now a SUPERADMIN.`);
   } catch (error) {
-    console.error("❌ Migration failed:", error);
+    console.error(" Migration failed:", error);
   } finally {
     await prisma.$disconnect();
   }

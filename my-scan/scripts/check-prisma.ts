@@ -7,10 +7,10 @@ async function main() {
   console.log('Checking Prisma Client...');
   
   if (!prisma.auditLog) {
-    console.error('❌ prisma.auditLog is MISSING');
+    console.error(' prisma.auditLog is MISSING');
     process.exit(1);
   } else {
-    console.log('✅ prisma.auditLog exists');
+    console.log(' prisma.auditLog exists');
   }
 
   // Check if types allow accessing new fields (static check won't work in runtime, but we can verify the model definition if accessible)

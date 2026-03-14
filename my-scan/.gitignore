@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 .env.local
 # vercel
 .vercel
@@ -51,8 +52,19 @@ next-env.d.ts
 /prisma/migrations/*
 
 *.DS_Store
-# Custom Deployment Notes
-NOTE_*.md
-env.production.example
+# Custom Exclusions for Migration
 worker.log
+lint-report.txt
+structure.txt
+sampleReport.pdf
+sampleReport.txt
+IMPLEMENTATION_SUMMARY.md
+ARCHITECTURE.md
+UPDATED_FLOW_GUIDE.md
+README_TH.md
+commits-analysis.md
+prisma.config.ts.bak
+merge-changes.txt
+*.log
+/scripts/perf-metrics.js
 

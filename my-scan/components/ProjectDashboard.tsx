@@ -289,7 +289,7 @@ export default function ProjectDashboard({ userEmail }: { userEmail: string }) {
                         {service.serviceName}
                         {service.lastScan?.imagePushed && (
                           <span className="flex items-center gap-1 text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold border border-emerald-200">
-                             🚀 Deployed
+                              Deployed
                           </span>
                         )}
                       </h4>
@@ -299,7 +299,7 @@ export default function ProjectDashboard({ userEmail }: { userEmail: string }) {
                         </p>
                         {/* [NEW] Show Average Duration */}
                         <span className="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 flex items-center gap-1">
-                            ⏱️ {service.averageDuration ? 
+                            ⏱ {service.averageDuration ? 
                                 `Avg: ${Math.floor(service.averageDuration / 60)}m ${service.averageDuration % 60}s` 
                                 : "Est: Pending"}
                         </span>

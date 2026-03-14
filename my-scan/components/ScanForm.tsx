@@ -513,7 +513,7 @@ function ScanFormContent({ buildMode }: Props) {
                     </p>
                   </div>
 
-                  {/* ✅ Added Version Label for Scan Only */}
+                  {/*  Added Version Label for Scan Only */}
                   <div className="mb-6">
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase flex items-center gap-1">
                       <Tag size={12} /> Version Label
@@ -530,7 +530,7 @@ function ScanFormContent({ buildMode }: Props) {
                     </p>
                   </div>
 
-                  {/* ✅ Hide Scanner Level for Scan Only (Not implemented yet) */}
+                  {/*  Hide Scanner Level for Scan Only (Not implemented yet) */}
                   {buildMode && (
                     <div className="mb-auto">
                       <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">

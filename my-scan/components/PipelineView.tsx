@@ -45,7 +45,7 @@ export default function PipelineView(props: {
     }
   }, []);
 
-  // ✅ 1. ฟังก์ชันโหลดข้อมูลปกติ (Load Local Data)
+  //  1. ฟังก์ชันโหลดข้อมูลปกติ (Load Local Data)
   const fetchStatus = useCallback(async () => {
     try {
       if (!scanId) return;
@@ -81,7 +81,7 @@ export default function PipelineView(props: {
     }
   }, [scanId, fetchComparison]);
 
-  // ✅ 2. ฟังก์ชัน Auto-Sync (เรียก API POST เพื่อดึงจาก GitLab)
+  //  2. ฟังก์ชัน Auto-Sync (เรียก API POST เพื่อดึงจาก GitLab)
   const autoSyncGitLab = useCallback(async () => {
     try {
       // เรียก API ที่เราเพิ่งรวมไฟล์ไป (POST /api/scan/[id])
@@ -95,7 +95,7 @@ export default function PipelineView(props: {
     }
   }, [scanId, fetchStatus]);
 
-  // ✅ 3. The "Automator" Effect (หัวใจสำคัญ)
+  //  3. The "Automator" Effect (หัวใจสำคัญ)
   useEffect(() => {
     // โหลดครั้งแรกทันทีที่เข้าหน้า
     fetchStatus();
@@ -238,7 +238,7 @@ export default function PipelineView(props: {
     }
   };
 
-  // ✅ New Rescan Handler for Cancelled/Failed State
+  //  New Rescan Handler for Cancelled/Failed State
   const handleRestartScan = async () => {
     if (!run?.serviceId) return;
     setIsLoading(true); // Show loading temporarily

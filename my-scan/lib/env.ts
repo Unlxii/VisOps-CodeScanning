@@ -50,7 +50,7 @@ function validateEnv() {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const missing = error.issues.map((e: z.ZodIssue) => `  - ${e.path.join('.')}: ${e.message}`).join('\n');
-      console.error('\n❌ Environment validation failed:\n' + missing + '\n');
+      console.error('\n Environment validation failed:\n' + missing + '\n');
       
       // In development, continue with warnings; in production, throw if not building
       if (process.env.NODE_ENV === 'production') {

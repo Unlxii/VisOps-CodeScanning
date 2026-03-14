@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost:5672";
 
 async function checkSystem() {
-  console.log("🔍 Checking System Status...");
+  console.log("� Checking System Status...");
   
   // 1. Check DB Connection & Job Counts
   try {
@@ -15,14 +15,14 @@ async function checkSystem() {
     const failed = await prisma.scanHistory.count({ where: { status: "FAILED" } });
     const success = await prisma.scanHistory.count({ where: { status: "SUCCESS" } });
     
-    console.log(`\n📊 Database Job Stats:`);
+    console.log(`\n� Database Job Stats:`);
     console.log(`   - RUNNING: ${running}`);
     console.log(`   - QUEUED:  ${queued}`);
     console.log(`   - SUCCESS: ${success}`);
     console.log(`   - FAILED:  ${failed}`);
     
   } catch (e) {
-    console.error("❌ Database Check Failed:", e);
+    console.error(" Database Check Failed:", e);
   }
 
   // 2. Check RabbitMQ
@@ -33,13 +33,13 @@ async function checkSystem() {
     const buildQ = await ch.assertQueue("build-job-queue", { durable: true });
     const scanQ = await ch.assertQueue("scan-job-queue", { durable: true });
     
-    console.log(`\nMZ️ RabbitMQ Queues:`);
+    console.log(`\nMZ RabbitMQ Queues:`);
     console.log(`   - Build Queue: ${buildQ.messageCount} waiting, ${buildQ.consumerCount} consumers`);
     console.log(`   - Scan Queue:  ${scanQ.messageCount} waiting, ${scanQ.consumerCount} consumers`);
     
     await conn.close();
   } catch (e) {
-    console.error("❌ RabbitMQ Check Failed:", e);
+    console.error(" RabbitMQ Check Failed:", e);
   }
 }
 
