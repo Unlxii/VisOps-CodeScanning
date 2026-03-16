@@ -2,10 +2,10 @@ version: '3.8'
 services:
   web:
     build: 
-      context: ./my-scan
+      context: .
       dockerfile: Dockerfile
     ports:
-      - "80:3000"  # ยิงพอร์ต 80 เข้า 3000
+      - "80:3000"
     env_file: .env
     depends_on:
       - db
@@ -14,8 +14,9 @@ services:
 
   worker:
     build: 
-      context: ./my-scan
+      context: .
       dockerfile: Dockerfile.worker
+    command: /bin/sh -c "npx prisma db push && npx tsx scripts/create-admin.ts && npm run worker"
     env_file: .env
     depends_on:
       - db
@@ -41,3 +42,4 @@ services:
 
 volumes:
   postgres_data:
+
