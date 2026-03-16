@@ -12,7 +12,7 @@ VisScan เป็นแพลตฟอร์มสำหรับจัดกา
 
 ## Tech Stack Details
 
-- **Frontend:** Next.js 14 (App Router), React 18, TypeScript
+- **Frontend:** Next.js 16 (App Router), React 18, TypeScript
 - **Styling:** Tailwind CSS, Lucide React Icons
 - **Authentication:** NextAuth.js v4 with Credentials / Google OAuth
 - **Database:** PostgreSQL 15
@@ -72,24 +72,25 @@ npm run worker:dev
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-> [!TIP]
-> **Superadmin Setup**: ระบบจะเปิดสร้างบัญชี Superadmin อัตโนมัติเมื่อ Container เปิดใช้งานครั้งแรก
-> - **Username**: `root`
->   - **Password**: แบบสุ่ม (Random) จะถูกปริ้นท์บอกที่ Logs คอนเทนเนอร์หลังบิวด์สำเร็จ !
+> **Superadmin Setup**: 
+```bash
+docker compose -f docker-compose.prod.yml logs worker
+```
+
 
 ---
 
 ## Features (ฟังก์ชันการทำงานหลัก)
 
 ### 1. Identity & Access Management (IAM)
-- ✅ ระบบเข้าสู่ระบบความปลอดภัย
-- ✅ **User Approval Flow:** แอดมินตรวจสอบเพื่ออนุมัติสิทธิ์เข้าใช้งาน
-- ✅ **Role-Based Access Control:** สลับสิทธิ์แอดมินหรือผู้ใช้ทั่วไปได้ชัดเจน
+-  ระบบเข้าสู่ระบบความปลอดภัย
+-  **User Approval Flow:** แอดมินตรวจสอบเพื่ออนุมัติสิทธิ์เข้าใช้งาน
+- **Role-Based Access Control:** สลับสิทธิ์แอดมินหรือผู้ใช้ทั่วไปได้ชัดเจน
 
 ### 2. Scanning Workflow
-- ✅ สแกนสถิติหรือสแกนคอนเทนเนอร์ (Gitleaks, Semgrep, Trivy)
-- ✅ จัดกลุ่มจัดลำดับการสเตททำงาน CI/CD
-- ✅ ฟลิตเตอร์เปรียบเทียบผลลัพธ์ Scan Results ในอดีตได้
+-  สแกนสถิติหรือสแกนคอนเทนเนอร์ (Gitleaks, Semgrep, Trivy)
+-  จัดกลุ่มจัดลำดับการสเตททำงาน CI/CD
+-  ฟลิตเตอร์เปรียบเทียบผลลัพธ์ Scan Results ในอดีตได้
 
 -- 
 ทีมพัฒนา:

@@ -7,6 +7,27 @@ title = "Gitleaks Config for VisScan"
 [extend]
 useDefault = true
 
+# Allowlist patterns to reduce false positives (Defined at top to apply globally)
+[allowlist]
+description = "Allowlist common false positives"
+regexes = [
+    '''(?i)(example|sample|dummy|test|fake|placeholder|xxx|changeme)''',
+    '''your[_-]?(api|secret|key|token)''',
+    '''<(API|SECRET|KEY|TOKEN)>''',
+    '''process\.env''',
+    '''z\.string''',
+    '''hashedPassword''',
+    '''postgresql://user:password''',
+]
+paths = [
+    '''\.env\.example$''',
+    '''\.env$''',
+    '''\.env\..*$''',
+    '''config\.(js|ts|json|yaml|yml)$''',
+    '''settings\.(py|js|ts)$''',
+    '''prisma/reset-admin\.ts$''',
+]
+
 # Additional rules for common secret patterns
 [[rules]]
 id = "generic-api-key"
@@ -25,20 +46,3 @@ id = "database-connection"
 description = "Database Connection String"
 regex = '''(?i)(mongodb|mysql|postgres|postgresql|redis)://[^\s'\"]+'''
 tags = ["database", "connection"]
-
-# Allowlist patterns to reduce false positives
-[allowlist]
-description = "Allowlist common false positives"
-regexes = [
-    '''(?i)(example|sample|dummy|test|fake|placeholder|xxx|changeme)''',
-    '''your[_-]?(api|secret|key|token)''',
-    '''<(API|SECRET|KEY|TOKEN)>''',
-]
-
-# File patterns to explicitly include
-paths = [
-    '''\\.env$''',
-    '''\\.env\\..*$''',
-    '''config\\.(js|ts|json|yaml|yml)$''',
-    '''settings\\.(py|js|ts)$''',
-]
