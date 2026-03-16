@@ -171,6 +171,8 @@ gitleaks_scan:
   needs: ["fetch_and_detect"]
   script:
     - echo "Gitleaks Scanning..."
+    # Save default config
+    - cp .gitleaks.toml /tmp/default.toml || true
     # 🌟 ดึงประวัติไฟล์มาจาก URL เองโดยนำมาพักใน Folder ชั่วคราว (temp) ก่อนดึง .git มารวมกัน
     - apk add --no-cache git curl || true
     - |
@@ -183,7 +185,16 @@ gitleaks_scan:
       mv temp_git/.git .
       rm -rf temp_git
       git reset --mixed || true
-    - gitleaks detect --source . -v --report-path gitleaks-report.json --exit-code 0
+    - |
+      if git ls-files --error-unmatch .gitleaks.toml > /dev/null 2>&1; then
+          echo "Found user provided .gitleaks.toml"
+          git checkout .gitleaks.toml
+          gitleaks detect --source . -v --report-path gitleaks-report.json --exit-code 0
+      else
+          echo "Using default .gitleaks.toml"
+          cp /tmp/default.toml .gitleaks.toml
+          gitleaks detect --source . -v --config-path .gitleaks.toml --report-path gitleaks-report.json --exit-code 0
+      fi
     
     # Webhook: Send Gitleaks Report
     - |
