@@ -15,6 +15,79 @@ import { checkDuplicateGlobally } from "@/lib/validators/serviceValidator";
 import { z } from "zod";
 import { logAction, AuditAction } from "@/lib/logger";
 
+/**
+ * @swagger
+ * /api/scan/start:
+ *   post:
+ *     summary: Start a new scan
+ *     description: Enqueues a new scan job for a service or a manual repository URL.
+ *     tags:
+ *       - Scanning
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               serviceId:
+ *                 type: string
+ *               scanMode:
+ *                 type: string
+ *                 enum: [SCAN_ONLY, SCAN_AND_BUILD]
+ *                 default: SCAN_AND_BUILD
+ *               imageTag:
+ *                 type: string
+ *                 default: latest
+ *               repoUrl:
+ *                 type: string
+ *               contextPath:
+ *                 type: string
+ *               imageName:
+ *                 type: string
+ *               projectName:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               force:
+ *                 type: boolean
+ *                 default: false
+ *               buildArgs:
+ *                 type: object
+ *                 additionalProperties:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Scan job queued successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 scanId:
+ *                   type: string
+ *                 status:
+ *                   type: string
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *       400:
+ *         description: Validation Error or Missing Credentials
+ *       403:
+ *         description: Access Denied
+ *       404:
+ *         description: Service Not Found
+ *       409:
+ *         description: Service Already Exists
+ *       429:
+ *         description: Scan in Progress or Quota Exceeded
+ */
+
 const ScanStartSchema = z.object({
   serviceId: z.string().optional(),
   scanMode: z.enum(["SCAN_ONLY", "SCAN_AND_BUILD"]).default("SCAN_AND_BUILD"),

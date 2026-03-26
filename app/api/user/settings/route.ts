@@ -5,6 +5,73 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { encrypt } from "@/lib/crypto";
 
+/**
+ * @swagger
+ * /api/user/settings:
+ *   get:
+ *     summary: Get user settings
+ *     description: Returns the current user's default Git and Docker settings.
+ *     tags:
+ *       - User
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: User settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 gitUser:
+ *                   type: string
+ *                 dockerUser:
+ *                   type: string
+ *                 hasGitToken:
+ *                   type: boolean
+ *                 hasDockerToken:
+ *                   type: boolean
+ *                 isDockerOrganization:
+ *                   type: boolean
+ *                 dockerOrgName:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *   post:
+ *     summary: Update user settings
+ *     description: Updates the current user's default Git and Docker credentials.
+ *     tags:
+ *       - User
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               gitUser:
+ *                 type: string
+ *               gitToken:
+ *                 type: string
+ *               dockerUser:
+ *                 type: string
+ *               dockerToken:
+ *                 type: string
+ *               isDockerOrganization:
+ *                 type: boolean
+ *               dockerOrgName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Settings saved successfully
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to update settings
+ */
+
 export async function GET() {
   const session = await getServerSession(authOptions);
 

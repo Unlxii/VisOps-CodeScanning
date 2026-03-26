@@ -34,6 +34,59 @@ function formatDuration(seconds: number) {
   return `${m}m ${s}s`;
 }
 
+/**
+ * @swagger
+ * /api/scan/status/{id}:
+ *   get:
+ *     summary: Get detailed scan and pipeline status
+ *     description: Returns the detailed status of a scan, including GitLab pipeline details, vulnerability counts, and logs.
+ *     tags:
+ *       - Scanning
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Scan ID or GitLab Pipeline ID
+ *     responses:
+ *       200:
+ *         description: Scan status details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 status:
+ *                   type: string
+ *                 counts:
+ *                   type: object
+ *                   properties:
+ *                     critical:
+ *                       type: number
+ *                     high:
+ *                       type: number
+ *                     medium:
+ *                       type: number
+ *                     low:
+ *                       type: number
+ *                 findings:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 logs:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       404:
+ *         description: Pipeline/Scan not found
+ *       500:
+ *         description: Server Error
+ */
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

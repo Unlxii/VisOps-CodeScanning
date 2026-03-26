@@ -3,6 +3,40 @@ import { prisma } from "@/lib/prisma";
 import axios from "axios";
 import https from "https";
 
+/**
+ * @swagger
+ * /api/scan/{id}/sync:
+ *   post:
+ *     summary: Synchronize scan status with GitLab
+ *     description: Manually triggers a status sync for a specific scan by querying the GitLab Pipeline API.
+ *     tags:
+ *       - Scanning
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Scan ID or GitLab Pipeline ID
+ *     responses:
+ *       200:
+ *         description: Status synchronized successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 newStatus:
+ *                   type: string
+ *       404:
+ *         description: Scan not found or no pipelineId
+ *       500:
+ *         description: Internal server error
+ */
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },

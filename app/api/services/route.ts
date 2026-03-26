@@ -5,6 +5,67 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * @swagger
+ * /api/services:
+ *   get:
+ *     summary: List project services
+ *     description: Returns a list of services owned by the logged-in user, including their most recent scan history.
+ *     tags:
+ *       - Services
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of services
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 services:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       serviceName:
+ *                         type: string
+ *                       imageName:
+ *                         type: string
+ *                       repoUrl:
+ *                         type: string
+ *                       contextPath:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       scans:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                             status:
+ *                               type: string
+ *                             vulnCritical:
+ *                               type: number
+ *                             vulnHigh:
+ *                               type: number
+ *                             vulnMedium:
+ *                               type: number
+ *                             vulnLow:
+ *                               type: number
+ *                 maxProjects:
+ *                   type: number
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to fetch services
+ */
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);

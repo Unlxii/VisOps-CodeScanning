@@ -9,6 +9,7 @@ export default function GettingStartedPage() {
     { title: "Introduction", href: "#introduction" },
     { title: "Setup & Configuration", href: "#setup" },
     { title: "Quick Start", href: "#quick-start" },
+    { title: "API Documentation", href: "#api-docs" },
   ];
 
   return (
@@ -165,6 +166,30 @@ export default function GettingStartedPage() {
                   >
                     Go to Scan Page →
                   </Link>
+                </div>
+              </div>
+            </section>
+
+            {/* API Documentation */}
+            <section id="api-docs" className="mb-12 scroll-mt-24">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+                API Documentation (Swagger)
+              </h2>
+              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-6 border border-slate-200 dark:border-slate-800">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 leading-6">
+                  นักพัฒนาสามารถเข้าถึงเอกสาร API แบบละเอียดได้ผ่าน Swagger UI เพื่อทดสอบและดูรายละเอียดของ Endpoints ต่างๆ
+                </p>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500"></div>
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">URL: <Link href="/docs" className="text-blue-600 dark:text-blue-400 hover:underline">/docs</Link></span>
+                  </div>
+                  <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 p-3 rounded border border-amber-100 dark:border-amber-800/50">
+                    <div className="flex-shrink-0 text-amber-600 dark:text-amber-400 text-lg">⚠️</div>
+                    <p className="text-xs text-amber-700 dark:text-amber-300 leading-5">
+                      <strong>Security Note:</strong> เอกสาร Swagger จะสามารถเข้าถึงได้เฉพาะบน <strong>localhost</strong> เท่านั้น และจะถูกปิดการใช้งานโดยอัตโนมัติในสภาพแวดล้อม Production เพื่อความปลอดภัย
+                    </p>
+                  </div>
                 </div>
               </div>
             </section>

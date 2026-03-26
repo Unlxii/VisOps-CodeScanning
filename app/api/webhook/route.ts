@@ -58,6 +58,57 @@ function verifyWebhookSignature(req: Request): boolean {
   return signature === secret;
 }
 
+/**
+ * @swagger
+ * /api/webhook:
+ *   post:
+ *     summary: GitLab Pipeline Webhook Handler
+ *     description: Receives status updates and security reports from GitLab CI/CD pipelines.
+ *     tags:
+ *       - External Webhooks
+ *     security: []
+ *     parameters:
+ *       - in: header
+ *         name: X-Gitlab-Token
+ *         schema:
+ *           type: string
+ *         description: GitLab Webhook Secret Token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               pipelineId:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *               tool:
+ *                 type: string
+ *               report:
+ *                 type: object
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               pipelineId:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *               reportFile:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Webhook processed successfully
+ *       401:
+ *         description: Invalid webhook signature
+ *       404:
+ *         description: Scan record not found
+ *       500:
+ *         description: Internal server error
+ */
 export async function POST(req: Request) {
   // Verify webhook signature (optional security layer)
   if (!verifyWebhookSignature(req)) {

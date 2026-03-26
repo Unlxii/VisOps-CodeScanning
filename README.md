@@ -96,3 +96,16 @@ docker compose -f docker-compose.prod.yml logs worker
 ทีมพัฒนา:
 - Ronnachai (Backend)
 - Kittiwat (Frontend)
+---
+
+## Developer Resources
+
+### API Documentation (Swagger)
+- **Endpoint:** /docs
+- **Access:** เฉพาะบน **localhost** เท่านั้น (127.0.0.1) และปิดใน Production อัตโนมัติเพื่อความปลอดภัย
+- **Usage:** นักพัฒนาสามารถทดสอบ APIs ต่างๆ (Project, Scan, Services) ได้โดยตรงผ่าน Swagger UI พร้อมระบบ Authentication ผ่าน Session Cookie
+
+### Database ER Diagram
+- รายละเอียดความสัมพันธ์ของฐานข้อมูล (Prisma Schema) สามารถดูได้ที่ [ER Diagram](./docs/er_diagram.md) (หรือใน Artifacts ของโปรเจกต์)
+
+---

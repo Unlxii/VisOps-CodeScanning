@@ -5,6 +5,74 @@ import { authOptions } from "@/lib/auth";
 import { checkDuplicateGlobally } from "@/lib/validators/serviceValidator";
 import { checkUserQuota } from "@/lib/quotaManager";
 
+/**
+ * @swagger
+ * /api/projects/create:
+ *   post:
+ *     summary: Create a new project service
+ *     description: Creates a new project group (if needed) and a project service. Handles GitHub and Docker credential resolution.
+ *     tags:
+ *       - Projects
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - groupName
+ *               - repoUrl
+ *               - serviceName
+ *               - imageName
+ *             properties:
+ *               groupName:
+ *                 type: string
+ *               repoUrl:
+ *                 type: string
+ *               isPrivate:
+ *                 type: boolean
+ *               serviceName:
+ *                 type: string
+ *               contextPath:
+ *                 type: string
+ *                 default: "."
+ *               imageName:
+ *                 type: string
+ *               isNewGroup:
+ *                 type: boolean
+ *               groupId:
+ *                 type: string
+ *               gitCredentialId:
+ *                 type: string
+ *               dockerCredentialId:
+ *                 type: string
+ *               force:
+ *                 type: boolean
+ *                 default: false
+ *     responses:
+ *       200:
+ *         description: Project created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 serviceId:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       409:
+ *         description: Service already exists
+ *       429:
+ *         description: Quota Exceeded
+ */
+
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
