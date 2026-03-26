@@ -7,6 +7,69 @@ import { encrypt } from "@/lib/crypto";
 import { logAction, AuditAction } from "@/lib/logger";
 
 // GET: ดึงรายการไปแสดง
+/**
+ * @swagger
+ * /api/user/settings/credentials:
+ *   get:
+ *     summary: List saved credentials (GitHub, Docker) for the current user
+ *     tags: [User]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: List of credentials (tokens are NOT returned)
+ *       401:
+ *         description: Unauthorized
+ *   post:
+ *     summary: Add a new credential (GitHub or Docker token)
+ *     tags: [User]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, provider, username, token]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               provider:
+ *                 type: string
+ *                 enum: [GITHUB, DOCKER]
+ *               username:
+ *                 type: string
+ *               token:
+ *                 type: string
+ *               isDefault:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Credential created
+ *       400:
+ *         description: Missing fields
+ *       401:
+ *         description: Unauthorized
+ *   delete:
+ *     summary: Delete a saved credential by ID
+ *     tags: [User]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Credential deleted
+ *       400:
+ *         description: ID required
+ *       401:
+ *         description: Unauthorized
+ */
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user)

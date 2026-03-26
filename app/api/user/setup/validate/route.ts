@@ -4,6 +4,40 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { validateAllTokens } from "@/lib/tokenValidator";
 
+/**
+ * @swagger
+ * /api/user/setup/validate:
+ *   post:
+ *     summary: Validate GitHub and Docker tokens without saving them
+ *     tags: [User]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [githubPAT, githubUsername, dockerUsername, dockerToken]
+ *             properties:
+ *               githubPAT:
+ *                 type: string
+ *               githubUsername:
+ *                 type: string
+ *               dockerUsername:
+ *                 type: string
+ *               dockerToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Validation result
+ *       400:
+ *         description: Token validation failed
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Validation failed
+ */
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);

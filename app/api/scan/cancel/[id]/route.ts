@@ -3,6 +3,35 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * @swagger
+ * /api/scan/cancel/{id}:
+ *   post:
+ *     summary: Cancel a running or queued scan and its GitLab pipeline
+ *     tags: [Scanning]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Scan UUID or GitLab Pipeline ID
+ *     responses:
+ *       200:
+ *         description: Scan cancelled successfully
+ *       400:
+ *         description: Scan cannot be cancelled (wrong status)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - not your project
+ *       404:
+ *         description: Scan not found
+ *       500:
+ *         description: Internal server error
+ */
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

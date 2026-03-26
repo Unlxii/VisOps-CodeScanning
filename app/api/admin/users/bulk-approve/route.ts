@@ -15,6 +15,37 @@ const BulkApproveSchema = z.union([
   }),
 ]);
 
+/**
+ * @swagger
+ * /api/admin/users/bulk-approve:
+ *   post:
+ *     summary: Approve multiple pending users at once (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               approveAll:
+ *                 type: boolean
+ *               userIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Users approved
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);

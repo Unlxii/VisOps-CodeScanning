@@ -5,6 +5,46 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkDuplicateInProject } from "@/lib/validators/serviceValidator";
 
+/**
+ * @swagger
+ * /api/projects/add-service:
+ *   post:
+ *     summary: Add a new service to an existing project group
+ *     tags: [Projects]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [groupId, serviceName]
+ *             properties:
+ *               groupId:
+ *                 type: string
+ *               serviceName:
+ *                 type: string
+ *               contextPath:
+ *                 type: string
+ *               dockerfileType:
+ *                 type: string
+ *               imageName:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Service added successfully
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Project group not found
+ *       409:
+ *         description: Duplicate service
+ *       500:
+ *         description: Internal server error
+ */
 export async function POST(req: Request) {
   try {
     // 1. Authentication

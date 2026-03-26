@@ -8,6 +8,30 @@ const GITLAB_API_URL = process.env.GITLAB_API_URL || "https://gitlab.com/api/v4"
 const GITLAB_TOKEN = process.env.GITLAB_TOKEN;
 const GITLAB_PROJECT_ID = process.env.GITLAB_PROJECT_ID;
 
+/**
+ * @swagger
+ * /api/admin/scans/{id}:
+ *   delete:
+ *     summary: Admin delete a scan (cancels pipeline in GitLab if running)
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Scan deleted (pipeline cancelled if active)
+ *       401:
+ *         description: Unauthorized (Admin only)
+ *       404:
+ *         description: Scan not found
+ *       500:
+ *         description: Internal server error
+ */
 export async function DELETE(
   req: Request,
   props: { params: Promise<{ id: string }> }

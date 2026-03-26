@@ -3,6 +3,32 @@ import axios from "axios";
 import https from "https";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * @swagger
+ * /api/scan/confirm-push/{id}:
+ *   post:
+ *     summary: Confirm and trigger Docker image push after a successful scan
+ *     description: Triggers the manual 'push_to_hub' GitLab CI job for the given pipeline.
+ *     tags: [Scanning]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Scan UUID or GitLab Pipeline ID
+ *     responses:
+ *       200:
+ *         description: Docker Push Triggered
+ *       400:
+ *         description: No manual release job found
+ *       404:
+ *         description: Scan or pipeline not found
+ *       500:
+ *         description: API Error
+ */
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

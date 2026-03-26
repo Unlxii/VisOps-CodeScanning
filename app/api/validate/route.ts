@@ -1,5 +1,35 @@
 import { NextResponse } from "next/server";
 
+/**
+ * @swagger
+ * /api/validate:
+ *   post:
+ *     summary: Validate a GitHub PAT or Docker Hub credentials against the external API
+ *     tags: [Validation]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [type]
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [github, docker]
+ *               username:
+ *                 type: string
+ *                 description: Required for Docker Hub
+ *               token:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Validation result (valid true/false)
+ *       400:
+ *         description: Unknown type
+ *       500:
+ *         description: Validation Service Error
+ */
 export async function POST(req: Request) {
   try {
     const { type, username, token } = await req.json();

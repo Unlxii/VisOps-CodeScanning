@@ -4,6 +4,45 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * @swagger
+ * /api/admin/history:
+ *   get:
+ *     summary: Get all scan history (Admin only)
+ *     description: SUPERADMIN sees all scans. ADMIN sees scans by regular users only.
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: List of scan history
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Internal Server Error
+ *   delete:
+ *     summary: Bulk delete scans by IDs (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Number of deleted records
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function GET() {
   const session = await getServerSession(authOptions);
   

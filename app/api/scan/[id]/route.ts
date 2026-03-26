@@ -88,6 +88,70 @@ function extractAllFindings(scan: any): any[] {
 }
 
 // 1. GET: ดึงข้อมูล Scan สำหรับ PipelineView
+/**
+ * @swagger
+ * /api/scan/{id}:
+ *   get:
+ *     summary: Get scan details and findings by scan ID or pipeline ID
+ *     tags: [Scanning]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Scan UUID or GitLab Pipeline ID
+ *     responses:
+ *       200:
+ *         description: Scan details including findings and vulnerability counts
+ *       404:
+ *         description: Scan not found
+ *   delete:
+ *     summary: Delete a scan record by scan ID or pipeline ID
+ *     tags: [Scanning]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Deleted successfully
+ *       500:
+ *         description: Failed to delete
+ *   patch:
+ *     summary: Force cancel a scan (Admin only)
+ *     tags: [Scanning]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [CANCELLED]
+ *     responses:
+ *       200:
+ *         description: Scan updated
+ *       403:
+ *         description: Admin only
+ *       404:
+ *         description: Scan not found
+ */
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -174,7 +238,7 @@ export async function GET(
     }
 
     // สร้าง URL ไปยัง GitLab (ปรับแก้ตาม URL จริงของคุณ)
-    const gitlabBaseUrl = process.env.GITLAB_API_URL || "http://10.10.184.118";
+    const gitlabBaseUrl = process.env.GITLAB_API_URL;
     const projectUrl = `${gitlabBaseUrl}/admin/projects/${process.env.GITLAB_PROJECT_ID}/pipelines/${scan.pipelineId}`;
 
     // --- Response ---

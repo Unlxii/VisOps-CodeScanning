@@ -9,6 +9,39 @@ const ActionSchema = z.object({
   action: z.enum(["PROMOTE", "DEMOTE", "REJECT", "APPROVE"]),
 });
 
+/**
+ * @swagger
+ * /api/admin/users/role:
+ *   post:
+ *     summary: Promote, demote, approve, or reject a user (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId, action]
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               action:
+ *                 type: string
+ *                 enum: [PROMOTE, DEMOTE, REJECT, APPROVE]
+ *     responses:
+ *       200:
+ *         description: User role/status updated
+ *       400:
+ *         description: Cannot modify own role
+ *       403:
+ *         description: Unauthorized or cannot modify other admin
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);

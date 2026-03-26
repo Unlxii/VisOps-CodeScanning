@@ -9,6 +9,40 @@ const QuotaUpdateSchema = z.object({
   maxProjects: z.number().int().min(1).max(100),
 });
 
+/**
+ * @swagger
+ * /api/admin/users/quota:
+ *   patch:
+ *     summary: Update a user's max project quota (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId, maxProjects]
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               maxProjects:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 100
+ *     responses:
+ *       200:
+ *         description: Quota updated
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function PATCH(req: Request) {
   try {
     const session = await getServerSession(authOptions);

@@ -3,6 +3,31 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth"; // Adjust path as needed
 import { prisma } from "@/lib/prisma"; // Adjust path as needed
 
+/**
+ * @swagger
+ * /api/projects/{id}/info:
+ *   get:
+ *     summary: Get detailed project/service info including Dockerfile and credentials
+ *     tags: [Projects]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Project Group ID or Service ID
+ *     responses:
+ *       200:
+ *         description: Project info with dockerfile and services
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Project info not found
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

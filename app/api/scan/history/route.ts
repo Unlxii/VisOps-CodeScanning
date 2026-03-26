@@ -9,6 +9,52 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * @swagger
+ * /api/scan/history:
+ *   get:
+ *     summary: Get scan history for the current user
+ *     tags: [Scanning]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: serviceId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: projectId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *     responses:
+ *       200:
+ *         description: Scan history list
+ *       401:
+ *         description: Unauthorized
+ *   delete:
+ *     summary: Delete a failed or cancelled scan from history
+ *     tags: [Scanning]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: scanId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Scan deleted
+ *       400:
+ *         description: Only failed/cancelled scans can be deleted
+ *       404:
+ *         description: Scan not found
+ */
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);

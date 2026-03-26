@@ -4,6 +4,33 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * @swagger
+ * /api/services/{id}:
+ *   delete:
+ *     summary: Delete a service and its scan history (Owner or Admin only)
+ *     tags: [Services]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Service ID
+ *     responses:
+ *       200:
+ *         description: Service deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Service not found
+ *       500:
+ *         description: Failed to delete service
+ */
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -2,6 +2,56 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // GET: ดึง Template (Database -> Fallback)
+/**
+ * @swagger
+ * /api/templates:
+ *   get:
+ *     summary: Get a Dockerfile template for a given stack (public)
+ *     description: Returns a Dockerfile template from the database or a built-in fallback. Supported stacks - node, python, java-maven, java-gradle, go, rust, dotnet, php, ruby.
+ *     tags: [Templates]
+ *     parameters:
+ *       - in: query
+ *         name: stack
+ *         required: false
+ *         schema:
+ *           type: string
+ *           default: default
+ *     responses:
+ *       200:
+ *         description: Dockerfile template as plain text
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ *   post:
+ *     summary: Admin - Create or update a Dockerfile template
+ *     tags: [Templates]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [stack, content]
+ *             properties:
+ *               stack:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Template saved
+ *       400:
+ *         description: Missing stack or content
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       500:
+ *         description: Failed to update template
+ */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const stack = (searchParams.get("stack") || "default").toLowerCase();

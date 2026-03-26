@@ -3,6 +3,22 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+/**
+ * @swagger
+ * /api/admin/users:
+ *   get:
+ *     summary: List all users with stats (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: List of users with project/scan stats
+ *       403:
+ *         description: Unauthorized (Admin only)
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);

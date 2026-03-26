@@ -9,6 +9,82 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * @swagger
+ * /api/projects/{id}:
+ *   get:
+ *     summary: Get a single project by ID
+ *     tags: [Projects]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Project details
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Project not found
+ *   patch:
+ *     summary: Update a project (name or repoUrl)
+ *     tags: [Projects]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               groupName:
+ *                 type: string
+ *               repoUrl:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Project updated
+ *   delete:
+ *     summary: Delete a project (optionally force-stop active scans first)
+ *     tags: [Projects]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               forceStop:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Project deleted
+ *       400:
+ *         description: Active scans exist (use forceStop)
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Not found
+ */
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -8,6 +8,22 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * @swagger
+ * /api/admin/notifications/pending-users:
+ *   get:
+ *     summary: Get list of pending users for admin notification bell (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: List of pending users with count
+ *       403:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);

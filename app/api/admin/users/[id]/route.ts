@@ -3,6 +3,57 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+/**
+ * @swagger
+ * /api/admin/users/{id}:
+ *   get:
+ *     summary: Get detailed user profile (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User profile with projects, services, and scan stats
+ *       403:
+ *         description: Unauthorized or access denied
+ *       404:
+ *         description: User not found
+ *   patch:
+ *     summary: Update a user's status or role (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [ACTIVE, BANNED]
+ *               role:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User updated
+ *       403:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

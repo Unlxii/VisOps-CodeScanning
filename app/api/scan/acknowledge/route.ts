@@ -9,6 +9,41 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * @swagger
+ * /api/scan/acknowledge:
+ *   post:
+ *     summary: Acknowledge or archive a FAILED_SECURITY scan
+ *     tags: [Scanning]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [scanId, action]
+ *             properties:
+ *               scanId:
+ *                 type: string
+ *               action:
+ *                 type: string
+ *                 enum: [acknowledge, delete]
+ *     responses:
+ *       200:
+ *         description: Action performed successfully
+ *       400:
+ *         description: Invalid action or scan not in FAILED_SECURITY status
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Scan not found
+ *       500:
+ *         description: Failed to acknowledge scan
+ */
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);

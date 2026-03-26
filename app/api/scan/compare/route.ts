@@ -3,6 +3,36 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * @swagger
+ * /api/scan/compare:
+ *   post:
+ *     summary: Compare findings between two scans
+ *     tags: [Scanning]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [scanId1, scanId2]
+ *             properties:
+ *               scanId1:
+ *                 type: string
+ *               scanId2:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Comparison result with new, resolved, and persistent findings
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Scans not found
+ *       500:
+ *         description: Server error
+ */
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);

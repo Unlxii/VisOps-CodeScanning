@@ -5,6 +5,41 @@ import { prisma } from "@/lib/prisma";
 import { encrypt } from "@/lib/crypto";
 import { validateAllTokens } from "@/lib/tokenValidator";
 
+/**
+ * @swagger
+ * /api/user/setup/complete:
+ *   post:
+ *     summary: Complete initial setup with GitHub and Docker credentials
+ *     description: Validates then saves encrypted GitHub PAT and Docker token for the current user. Marks the user as setup complete.
+ *     tags: [User]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [githubPAT, githubUsername, dockerUsername, dockerToken]
+ *             properties:
+ *               githubPAT:
+ *                 type: string
+ *               githubUsername:
+ *                 type: string
+ *               dockerUsername:
+ *                 type: string
+ *               dockerToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Setup completed successfully
+ *       400:
+ *         description: Missing fields or token validation failed
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Setup failed
+ */
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);

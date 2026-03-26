@@ -12,6 +12,22 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+/**
+ * @swagger
+ * /api/dashboard:
+ *   get:
+ *     summary: Get the current user's projects, services, and active scans
+ *     tags: [Dashboard]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard data with projects, activeScans, and quota
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
